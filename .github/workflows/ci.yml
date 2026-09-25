@@ -19,7 +19,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test example/lib example/integration_test pigeons
+      # Generated Pigeon code (lib/src/native) is excluded: its formatting
+      # depends on the SDK version that ran the formatter.
+      - run: find lib test example/lib example/integration_test pigeons -name '*.dart' -not -path 'lib/src/native/*' -print0 | xargs -0 dart format --output=none --set-exit-if-changed
       - run: flutter analyze
       - run: (cd example && flutter analyze)
       - run: flutter test

@@ -163,7 +163,7 @@ Simulator has no camera; see [Replacing services](#replacing-services).
 
    ```kotlin
    android {
-       compileSdk = 36
+       compileSdk = 37 // permission_handler 13 requires 37
        defaultConfig {
            minSdk = 26
        }
@@ -171,7 +171,9 @@ Simulator has no camera; see [Replacing services](#replacing-services).
    ```
 
 2. **Manifest permissions** in `android/app/src/main/AndroidManifest.xml`.
-   Declare only what your gallery mode needs:
+   Declare only what your gallery mode needs. Add
+   `xmlns:tools="http://schemas.android.com/tools"` to the `<manifest>` tag:
+   it is needed for the `tools:replace` below.
 
    ```xml
    <!-- Always: camera and microphone -->
@@ -186,9 +188,12 @@ Simulator has no camera; see [Replacing services](#replacing-services).
    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
        android:maxSdkVersion="32" />
 
-   <!-- Saving to the gallery on Android 10 and below (gal) -->
+   <!-- Saving to the gallery on Android 10 and below (gal). The camera plugin
+        declares this permission with maxSdkVersion 28; tools:replace keeps 29,
+        otherwise the manifest merge fails. -->
    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-       android:maxSdkVersion="29" />
+       android:maxSdkVersion="29"
+       tools:replace="android:maxSdkVersion" />
 
    <!-- Only if your music provider returns MusicUrlSource tracks -->
    <uses-permission android:name="android.permission.INTERNET" />
