@@ -1,0 +1,17 @@
+---
+description: Swift rules for the iOS side of story_creator_kit (AVFoundation export, probe, waveform, thumbnails, Pigeon handlers). Apply when editing ios/**/*.swift.
+globs:
+  - "ios/**/*.swift"
+alwaysApply: false
+---
+
+# Swift (iOS plugin code)
+
+- Target iOS 16.0. Put newer APIs behind `if #available(iOS 17, *)` (or later), and keep a working fallback path.
+- Never edit `StoryNativeApi.g.swift`. Change `pigeons/story_native_api.dart`, regenerate with `dart run pigeon --input pigeons/story_native_api.dart`, and update Kotlin in the same change.
+- Every Pigeon completion is called exactly once, including on cancel and on every error path. Errors are `PigeonError(code:message:details:)` with the codes listed in the contract (`cancelled`, `invalid_input`, `unsupported_media`, `no_space`, `encoder`, `io`, `unknown`).
+- Validate request fields (paths exist, rects inside the canvas, 20-entry colour matrices, positive durations) and fail with `invalid_input`. Never crash the host app: no `try!`, no force unwraps on input.
+- Keep heavy work off the main thread. Send progress events to Dart on the main thread, a few per second at most.
+- Release `CVPixelBuffer`s, readers, writers and export sessions on every path. Reuse pixel buffer pools. Delete partial output on cancel and failure.
+- Colour: the 4×5 matrix has Flutter `ColorFilter.matrix` semantics, with the offset column in 0–255. Output is SDR BT.709.
+- Keep `Package.swift` and `story_creator_kit.podspec` in sync: same sources, resources (`PrivacyInfo.xcprivacy`) and deployment target.

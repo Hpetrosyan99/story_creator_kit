@@ -1,0 +1,17 @@
+---
+description: Entry point — repo-wide agent rules live in AGENTS.md
+alwaysApply: true
+---
+
+<!-- GENERATED FILE — DO NOT EDIT. Source: AGENTS.md. Regenerate: ./tool/sync_agents.sh -->
+
+# Read `AGENTS.md` first
+
+`/AGENTS.md` at the repo root is the single source of truth for architecture rules,
+layout, rules and the testing contract. Read it
+before any change and follow it over anything in this rules directory.
+
+The other `.cursor/rules/*.mdc` files add language- and library-level detail
+only (effective_dart, clean-code, dart_3_updates, mocktail, code review).
+
+Never edit this file; edit `AGENTS.md` and run `./tool/sync_agents.sh`.

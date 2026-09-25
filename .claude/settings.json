@@ -1,0 +1,56 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(flutter --version)",
+      "Bash(dart --version)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(dart analyze:*)",
+      "Bash(dart format:*)",
+      "Bash(dart fix:*)",
+      "Bash(flutter pub get)",
+      "Bash(./tool/sync_agents.sh:*)",
+      "WebFetch(domain:pub.dev)",
+      "WebFetch(domain:api.flutter.dev)",
+      "WebFetch(domain:docs.flutter.dev)",
+      "Bash(flutter pub get:*)",
+      "Bash(dart run pigeon:*)",
+      "Bash(flutter build:*)",
+      "Bash(dart pub publish --dry-run)",
+      "WebFetch(domain:developer.apple.com)",
+      "WebFetch(domain:developer.android.com)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/scripts/track_change.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/scripts/post_turn.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}

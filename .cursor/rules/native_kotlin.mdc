@@ -1,0 +1,19 @@
+---
+description: Kotlin rules for the Android side of story_creator_kit (Media3 Transformer export, probe, waveform, thumbnails, Pigeon handlers). Apply when editing android/**/*.kt or Gradle files.
+globs:
+  - "android/**/*.kt"
+  - "android/**/*.kts"
+alwaysApply: false
+---
+
+# Kotlin (Android plugin code)
+
+- minSdk 26, compileSdk 36. Put newer APIs behind `Build.VERSION.SDK_INT` checks, with a working fallback or a clear `invalid_input` / `unsupported_media` error.
+- Never edit `StoryNativeApi.g.kt`. Change `pigeons/story_native_api.dart`, regenerate with `dart run pigeon --input pigeons/story_native_api.dart`, and update Swift in the same change.
+- Media3 is pinned to 1.10.1 (androidx/media#3399 in 1.11.x). Keep all `androidx.media3` artifacts on one version, and note any change in `CHANGELOG.md`.
+- Every Pigeon callback completes exactly once, including on cancel and on every error path. Errors use the contract's codes (`cancelled`, `invalid_input`, `unsupported_media`, `no_space`, `encoder`, `io`, `unknown`).
+- `Transformer` runs on its application looper. Other work runs on coroutines scoped to the plugin; never block the main thread.
+- Normalise every audio input to one PCM format (sample rate and channel count) before mixing. Test with mono and silent sources.
+- Colour: the 4×5 matrix has Flutter `ColorFilter.matrix` semantics, with the offset column in 0–255; convert it for `RgbMatrix`. Tone-map HDR to SDR on API 29+.
+- Release `MediaExtractor`, `MediaMetadataRetriever`, codecs and bitmaps in `finally`. Use the application context, never a held `Activity`. Delete partial output on cancel and failure.
+- The library manifest declares no permissions. Hosts declare what their gallery mode needs (see README).
