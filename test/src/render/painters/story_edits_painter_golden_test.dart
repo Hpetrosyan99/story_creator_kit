@@ -1,3 +1,7 @@
+// Goldens are rendered on macOS; run with `flutter test --tags golden` there.
+@Tags(['golden'])
+library;
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';

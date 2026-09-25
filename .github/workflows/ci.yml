@@ -24,7 +24,8 @@ jobs:
       - run: find lib test example/lib example/integration_test pigeons -name '*.dart' -not -path 'lib/src/native/*' -print0 | xargs -0 dart format --output=none --set-exit-if-changed
       - run: flutter analyze
       - run: (cd example && flutter analyze)
-      - run: flutter test
+      # Goldens are macOS-rendered; they run in the ios job.
+      - run: flutter test --exclude-tags golden
       - run: ./tool/sync_agents.sh --check
       - run: dart pub publish --dry-run
 
@@ -52,4 +53,5 @@ jobs:
         with:
           channel: stable
           cache: true
+      - run: flutter test --tags golden
       - run: (cd example && flutter build ios --simulator --debug)
