@@ -6,6 +6,11 @@
 - Editor: gallery thumbnail replaces the media keeping edits; music chip; secondary tools behind "More".
 - Music: tap a track to select it; `MusicCategory.showRanks` for leaderboard-style lists.
 - Icons are bundled SVGs (new dependency: `flutter_svg`).
+- Camera Video / Photo switcher is a sliding capsule (tap or drag).
+- Editor tools sit on translucent circles so they stay visible on bright media; the "More" tools animate open and closed without moving the main tools.
+- Text highlight backgrounds join into one shape across lines (no seams).
+- Fix: two-finger scale / rotate grabs the overlay under the fingers even when neither finger starts on it.
+- Fix: export could stall with liquid glass on (hidden glass surfaces now draw flat) and under heavy icon shadows (shadows are pre-rendered).
 
 ## 0.1.0
 
