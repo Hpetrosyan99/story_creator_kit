@@ -12,6 +12,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FPS, SPEED, WIDTH = 12, 1.5, 420
 PALETTE_SAMPLES = 36
 NOISE = 10
+# Seconds of source video to keep: the GIF ends just after export starts.
+END = {'demo_2_gallery_and_music': 26.5}
 
 
 def stabilise(frames):
@@ -50,6 +52,8 @@ for video in videos:
                     video, tmp, str(FPS * SPEED), str(WIDTH)],
                    check=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
     frames = [Image.open(p).convert('RGB') for p in sorted(glob.glob(tmp + '/*.png'))]
+    if name in END:
+        frames = frames[:int(END[name] * FPS * SPEED)]
     frames = stabilise(frames)
     palette = palette_for(frames)
     quantized = [f.quantize(palette=palette, dither=Image.Dither.NONE) for f in frames]
