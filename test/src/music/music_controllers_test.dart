@@ -170,6 +170,29 @@ void main() {
       ]);
     });
 
+    test('resetFilters clears search and category in one reload', () async {
+      create();
+      await controller.start();
+      controller
+        ..selectCategory(provider.categories[1])
+        ..searchNow('Track 2');
+      await _flush();
+      expect(provider.queries, hasLength(3));
+      controller
+        ..setSearch('pending')
+        ..resetFilters();
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      await _flush();
+      expect(controller.category.id, 'all');
+      expect(controller.search, isEmpty);
+      expect(provider.queries, hasLength(4));
+      expect(provider.queries.last.categoryId, 'all');
+      expect(provider.queries.last.search, isEmpty);
+      controller.resetFilters();
+      await _flush();
+      expect(provider.queries, hasLength(4));
+    });
+
     test('an empty result shows the empty state', () async {
       provider = FakeMusicProvider(tracks: const []);
       create();

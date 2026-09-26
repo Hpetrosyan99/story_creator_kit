@@ -19,10 +19,11 @@ class LimitedAccessBanner extends StatelessWidget {
     final strings = scope.strings.camera;
     return Padding(
       key: GalleryKeys.limitedBanner,
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: theme.surfaceVariant,
+          color: theme.surface,
+          border: Border.all(color: theme.outline),
           borderRadius: BorderRadius.circular(theme.cornerRadius),
         ),
         child: Padding(
@@ -38,7 +39,9 @@ class LimitedAccessBanner extends StatelessWidget {
               Expanded(
                 child: Text(
                   strings.limitedAccessMessage,
-                  style: theme.bodyStyle,
+                  style: theme.bodyStyle.copyWith(
+                    color: theme.onSurfaceSecondary,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),

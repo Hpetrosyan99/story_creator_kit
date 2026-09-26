@@ -209,6 +209,47 @@ void main() {
       expect(t.position.dy, closeTo(600, 40));
     });
 
+    testWidgets(
+      'two fingers around a text rotate it even when neither starts on it',
+      (tester) async {
+        final h = await pumpEditor(
+          tester,
+          document: _withOverlays([_textAt(const Offset(540, 900))]),
+        );
+        // Both fingers well outside the text, the text between them.
+        final a = canvasPoint(tester, const Offset(140, 900));
+        final b = canvasPoint(tester, const Offset(940, 900));
+        final first = await tester.startGesture(a, pointer: 1);
+        await tester.pump();
+        final second = await tester.startGesture(b, pointer: 2);
+        await tester.pump();
+        const angle = 30 * math.pi / 180;
+        final mid = (a + b) / 2;
+        final half = (b - a) / 2;
+        for (var i = 1; i <= 10; i++) {
+          final r = angle * i / 10;
+          final v = Offset(
+            half.dx * math.cos(r) - half.dy * math.sin(r),
+            half.dx * math.sin(r) + half.dy * math.cos(r),
+          );
+          await first.moveTo(mid - v);
+          await second.moveTo(mid + v);
+          await tester.pump();
+        }
+        await first.up();
+        await second.up();
+        await tester.pump();
+
+        final doc = await h.export(tester);
+        // The text turned (the pinch used to go to the media, which
+        // cannot rotate).
+        expect(
+          doc.overlays.single.transform.rotation,
+          inInclusiveRange(angle * 0.6, angle * 1.05),
+        );
+      },
+    );
+
     testWidgets('dragging onto the trash deletes (with haptics)', (
       tester,
     ) async {
@@ -240,7 +281,9 @@ void main() {
 
       expect((await h.export(tester)).overlays, isEmpty);
       expect(h.haptics, contains('HapticFeedbackType.mediumImpact'));
-      // Undo brings it back.
+      // Undo brings it back (once the chrome has faded back in).
+      await tester.pump(const Duration(milliseconds: 200));
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.undo));
       await tester.pump();
       expect((await h.export(tester)).overlays, hasLength(1));
@@ -290,6 +333,7 @@ void main() {
       tester,
     ) async {
       final h = await pumpEditor(tester);
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.draw));
       await tester.pump();
 
@@ -342,6 +386,7 @@ void main() {
 
     testWidgets('brush size picker changes the width', (tester) async {
       final h = await pumpEditor(tester);
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.draw));
       await tester.pump();
       final sizes = find.bySemanticsLabel(strings.editor.brushSize);
@@ -433,6 +478,7 @@ void main() {
   group('filters (AC11)', () {
     testWidgets('the strip selects a filter', (tester) async {
       final h = await pumpEditor(tester);
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.filters).first);
       await tester.pump();
       await tester.tap(find.bySemanticsLabel('Warm'));
@@ -490,6 +536,7 @@ void main() {
   testWidgets('edits survive switching tools (AC14)', (tester) async {
     final h = await pumpEditor(tester);
     await addText(tester, 'Keep me');
+    await openMoreTools(tester);
     await tester.tap(find.bySemanticsLabel(strings.editor.draw));
     await tester.pump();
     final g = await tester.startGesture(
@@ -501,6 +548,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.bySemanticsLabel(strings.common.done));
     await tester.pump();
+    await openMoreTools(tester);
     await tester.tap(find.bySemanticsLabel(strings.editor.filters).first);
     await tester.pump();
     await tester.tap(find.bySemanticsLabel('Mono'));
@@ -547,6 +595,7 @@ void main() {
 
     testWidgets('back closes an open tool first', (tester) async {
       final h = await pumpEditor(tester);
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.filters).first);
       await tester.pump();
       expect(find.bySemanticsLabel('Warm'), findsOneWidget);
@@ -595,6 +644,7 @@ void main() {
       await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
 
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.draw));
       await tester.pump();
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
@@ -681,6 +731,7 @@ void main() {
           _textAt(StoryCanvas.center, text: 'B'),
         ]),
       );
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.adjust).first);
       await tester.pump();
       // Topmost overlay is selected first.

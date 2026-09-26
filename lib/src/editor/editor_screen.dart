@@ -1,21 +1,31 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../api/assets/story_filter.dart';
 import '../api/assets/story_sticker.dart';
+import '../api/config/capture_options.dart';
 import '../api/errors/story_exception.dart';
 import '../api/events/story_event.dart';
+import '../camera/widgets/gallery_shortcut.dart';
+import '../core/media_import.dart';
 import '../core/story_canvas.dart';
 import '../core/story_scope.dart';
+import '../gallery/gallery_sheet.dart';
 import '../model/drawing_stroke.dart';
 import '../model/media_placement.dart';
 import '../model/story_document.dart';
+import '../model/story_media.dart';
 import '../model/story_overlay.dart';
 import '../model/trim_range.dart';
 import '../music/music_picker.dart';
 import '../render/painters/story_paint_resources_loader.dart';
+import '../services/gallery/gallery_source.dart';
+import '../ui/story_icon.dart';
+import '../ui/story_nav_button.dart';
+import '../ui/story_stage.dart';
 import 'accessibility/overlay_actions.dart';
 import 'accessibility/overlay_adjust_panel.dart';
 import 'audio/audio_mix_panel.dart';
@@ -26,6 +36,7 @@ import 'canvas/story_canvas_view.dart';
 import 'drawing/drawing_brush.dart';
 import 'drawing/drawing_toolbar.dart';
 import 'editor_controller.dart';
+import 'editor_keys.dart';
 import 'filters/filter_strip.dart';
 import 'stickers/sticker_picker_panel.dart';
 import 'text/text_edit_overlay.dart';
@@ -35,6 +46,8 @@ import 'video/video_thumbnails.dart';
 import 'widgets/discard_dialog.dart';
 import 'widgets/editor_icon_button.dart';
 import 'widgets/editor_panel.dart';
+import 'widgets/editor_tool_column.dart';
+import 'widgets/music_chip.dart';
 
 /// The editor. Stays mounted underneath export and preview, so its state and
 /// undo history survive a return from preview.
@@ -85,7 +98,8 @@ class _EditorScreenState extends State<EditorScreen>
   final CanvasInteraction _interaction = CanvasInteraction();
   final ValueNotifier<String?> _notice = ValueNotifier(null);
   EditorPlayback? _playback;
-  late final VideoThumbnails _thumbnails;
+  late VideoThumbnails _thumbnails;
+  StoryMedia? _media;
   Timer? _noticeTimer;
   _TextEditing? _editing;
   TextOverlayStyle? _lastTextStyle;
@@ -94,6 +108,9 @@ class _EditorScreenState extends State<EditorScreen>
   int _resourcesRevision = 0;
   bool _initialized = false;
   bool _appVisible = true;
+  bool _moreTools = false;
+  bool _importing = false;
+  double _viewScale = 1;
   StoryDocument? _synced;
   GlobalKey<TextEditOverlayState> _textKey = GlobalKey();
 
@@ -127,7 +144,17 @@ class _EditorScreenState extends State<EditorScreen>
     _lastOriginalVolume = widget.initialDocument.originalVolume > 0
         ? widget.initialDocument.originalVolume
         : 1;
-    final media = widget.initialDocument.media;
+    _synced = _document;
+    WidgetsBinding.instance.addObserver(this);
+    _mountMedia(_document);
+    unawaited(_loadResources());
+  }
+
+  /// Sets up thumbnails, filter preview, playback and background for the
+  /// document's media: at start, and whenever the media changes (replaced
+  /// from the gallery, or by undo/redo of that).
+  void _mountMedia(StoryDocument document) {
+    final media = _media = document.media;
     _thumbnails = VideoThumbnails(
       inspector: _scope.services.inspector,
       media: media,
@@ -136,21 +163,21 @@ class _EditorScreenState extends State<EditorScreen>
     _preview = media.isVideo
         ? null
         : ResizeImage(FileImage(File(media.path)), width: 120);
-    if (media.isVideo || widget.initialDocument.music != null) {
+    _playback?.dispose();
+    _playback = null;
+    if (media.isVideo || document.music != null) {
       final playback = _playback = EditorPlayback(
         services: _scope.services,
         media: media,
         onError: _onPlaybackError,
       );
-      unawaited(playback.setActive(active: widget.active));
-      unawaited(playback.start(_document));
+      unawaited(playback.setActive(active: widget.active && _appVisible));
+      unawaited(playback.start(document));
     }
-    WidgetsBinding.instance.addObserver(this);
-    unawaited(_loadResources());
     if (media.isVideo) {
-      unawaited(_loadVideoPreview());
+      unawaited(_loadVideoPreview(media));
     }
-    unawaited(_computeBackground());
+    unawaited(_computeBackground(media));
   }
 
   @override
@@ -195,6 +222,10 @@ class _EditorScreenState extends State<EditorScreen>
       return;
     }
     _synced = document;
+    if (document.media != _media) {
+      setState(() => _mountMedia(document));
+      return;
+    }
     if (document.music != null && _playback == null) {
       final playback = _playback = EditorPlayback(
         services: _scope.services,
@@ -263,16 +294,16 @@ class _EditorScreenState extends State<EditorScreen>
     }
   }
 
-  Future<void> _computeBackground() async {
+  Future<void> _computeBackground(StoryMedia media) async {
     if (_document.background != const StoryBackground()) {
       return;
     }
-    final media = _document.media;
+    final thumbnails = _thumbnails;
     try {
-      final path = media.isVideo ? await _thumbnails.firstFrame() : media.path;
+      final path = media.isVideo ? await thumbnails.firstFrame() : media.path;
       final bytes = await File(path).readAsBytes();
       final background = await MediaPalette.fromEncoded(bytes);
-      if (!mounted) {
+      if (!mounted || _document.media != media) {
         return;
       }
       _controller.applyBackground(background);
@@ -281,10 +312,11 @@ class _EditorScreenState extends State<EditorScreen>
     }
   }
 
-  Future<void> _loadVideoPreview() async {
+  Future<void> _loadVideoPreview(StoryMedia media) async {
+    final thumbnails = _thumbnails;
     try {
-      final path = await _thumbnails.firstFrame();
-      if (mounted) {
+      final path = await thumbnails.firstFrame();
+      if (mounted && _media == media) {
         setState(
           () => _preview = ResizeImage(FileImage(File(path)), width: 120),
         );
@@ -520,6 +552,7 @@ class _EditorScreenState extends State<EditorScreen>
       context,
       segmentLength: length,
       current: current,
+      canvas: (_) => _ReadOnlyCanvas(state: this),
     );
     if (!mounted) {
       return;
@@ -529,6 +562,91 @@ class _EditorScreenState extends State<EditorScreen>
     }
     _syncActive();
   }
+
+  bool get _galleryEnabled =>
+      _scope.config.capture.galleryMode != GalleryMode.disabled;
+
+  /// Picks new media from the gallery (in-app grid or system picker) and
+  /// swaps it under the edits.
+  Future<void> _replaceMedia() async {
+    if (_importing || !_galleryEnabled) {
+      return;
+    }
+    final gallery = _scope.services.gallery;
+    final constraints = _scope.config.constraints;
+    await _playback?.setActive(active: false);
+    if (!mounted) {
+      return;
+    }
+    final PickedMedia? picked;
+    try {
+      picked =
+          _scope.config.capture.galleryMode == GalleryMode.inApp &&
+              gallery.supportsGrid
+          ? await GallerySheet.open(context)
+          : await gallery.pickWithSystemPicker(
+              photos: constraints.allowPhotos,
+              videos: constraints.allowVideos,
+            );
+    } on StoryException catch (e, s) {
+      _importFailed(e, s);
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (picked == null) {
+      _syncActive();
+      return;
+    }
+    setState(() => _importing = true);
+    try {
+      final media = await MediaImporter(
+        inspector: _scope.services.inspector,
+        session: _scope.session,
+        constraints: constraints,
+      ).importPicked(picked);
+      if (!mounted) {
+        return;
+      }
+      _controller.replaceMedia(
+        media,
+        maxDuration: constraints.maxVideoDuration,
+        photoDuration: constraints.photoWithMusicDuration,
+      );
+      _scope.report(
+        StoryEvent(
+          StoryEventType.mediaPicked,
+          properties: {'type': media.type.name, 'replaced': true},
+        ),
+      );
+    } on MediaTooShortException {
+      _showNotice(_scope.strings.camera.videoTooShort);
+    } on StoryException catch (e, s) {
+      _importFailed(e, s);
+    } finally {
+      if (mounted) {
+        setState(() => _importing = false);
+        _syncActive();
+      }
+    }
+  }
+
+  void _importFailed(StoryException error, StackTrace stackTrace) {
+    if (!mounted) {
+      return;
+    }
+    _report(error, stackTrace, error.code);
+    final strings = _scope.strings.camera;
+    _showNotice(switch (error.code) {
+      StoryErrorCode.mediaTooLarge => strings.mediaTooLarge,
+      StoryErrorCode.mediaUnsupported => strings.mediaUnsupported,
+      _ => strings.mediaUnavailable,
+    });
+    _syncActive();
+  }
+
+  void _toggleMoreTools() => setState(() => _moreTools = !_moreTools);
 
   void _setBrush(DrawingBrush brush) => setState(() => _brush = brush);
 
@@ -560,19 +678,24 @@ class _EditorScreenState extends State<EditorScreen>
     await _confirmLeave();
   }
 
-  Future<void> _confirmLeave() async {
-    final options = _scope.config.editor;
-    if (_controller.isDirty && options.confirmDiscard) {
-      final discard = await DiscardDialog.show(
-        context,
-        theme: _scope.theme,
-        strings: _scope.strings.common,
-      );
-      if (!discard || !mounted) {
-        return;
-      }
+  /// Whether leaving may go ahead: asks when the document is dirty and
+  /// `EditorOptions.confirmDiscard` is on.
+  Future<bool> _confirmDiscard() async {
+    if (!_controller.isDirty || !_scope.config.editor.confirmDiscard) {
+      return true;
     }
-    widget.onBack();
+    final discard = await DiscardDialog.show(
+      context,
+      theme: _scope.theme,
+      strings: _scope.strings.common,
+    );
+    return discard && mounted;
+  }
+
+  Future<void> _confirmLeave() async {
+    if (await _confirmDiscard()) {
+      widget.onBack();
+    }
   }
 
   void _export() {
@@ -586,8 +709,8 @@ class _EditorScreenState extends State<EditorScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = _scope.theme;
     final active = widget.active;
+    final editing = _editing;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -603,55 +726,71 @@ class _EditorScreenState extends State<EditorScreen>
             ignoring: !active,
             child: Material(
               type: MaterialType.transparency,
-              child: ColoredBox(
-                color: theme.background,
-                child: SafeArea(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final scale = StoryCanvas.viewScale(constraints.biggest);
-                      return ListenableBuilder(
-                        listenable: Listenable.merge([
-                          _controller,
-                          _interaction,
-                          ?_playback,
-                        ]),
-                        builder: (context, _) => Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Center(
-                              child: SizedBox(
-                                width: StoryCanvas.width * scale,
-                                height: StoryCanvas.height * scale,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(
-                                    theme.cornerRadius * 1.5,
-                                  ),
-                                  child: _EditorCard(state: this, scale: scale),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  StoryStage(
+                    card: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final scale = StoryCanvas.viewScale(
+                          constraints.biggest,
+                        );
+                        _trackViewScale(scale);
+                        return ListenableBuilder(
+                          listenable: Listenable.merge([
+                            _controller,
+                            _interaction,
+                            ?_playback,
+                          ]),
+                          builder: (context, _) => Center(
+                            child: SizedBox(
+                              width: StoryCanvas.width * scale,
+                              height: StoryCanvas.height * scale,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                  _scope.theme.cornerRadius,
                                 ),
+                                child: _EditorCard(state: this, scale: scale),
                               ),
                             ),
-                            if (_editing != null)
-                              TextEditOverlay(
-                                key: _textKey,
-                                initialText: _editing!.text,
-                                initialStyle: _editing!.style,
-                                options: _scope.config.editor,
-                                viewScale: scale,
-                                onDone: _finishText,
-                                onFontError: _onFontError,
-                              ),
-                          ],
-                        ),
-                      );
-                    },
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
+                  if (editing != null)
+                    TextEditOverlay(
+                      key: _textKey,
+                      initialText: editing.text,
+                      initialStyle: editing.style,
+                      options: _scope.config.editor,
+                      viewScale: _viewScale,
+                      onDone: _finishText,
+                      onFontError: _onFontError,
+                    ),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Remembers the canvas scale for the text editor, which is laid out
+  /// over the whole screen rather than inside the card.
+  void _trackViewScale(double scale) {
+    if (scale == _viewScale) {
+      return;
+    }
+    _viewScale = scale;
+    if (_editing != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    }
   }
 }
 
@@ -708,7 +847,7 @@ class _EditorCard extends StatelessWidget {
               duration: chromeDuration,
               child: drawing
                   ? _DrawingChrome(state: state)
-                  : _MainChrome(state: state),
+                  : _MainChrome(state: state, scale: scale),
             ),
           ),
         ),
@@ -725,26 +864,89 @@ class _EditorCard extends StatelessWidget {
   }
 }
 
-class _MainChrome extends StatelessWidget {
-  const _MainChrome({required this.state});
+/// The story as the editor shows it, without input or chrome: the backdrop
+/// of the music segment selector.
+class _ReadOnlyCanvas extends StatelessWidget {
+  const _ReadOnlyCanvas({required this.state});
 
   final _EditorScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = state._scope;
+    final controller = state._controller;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = StoryCanvas.viewScale(constraints.biggest);
+        return Center(
+          child: SizedBox(
+            width: StoryCanvas.width * scale,
+            height: StoryCanvas.height * scale,
+            child: IgnorePointer(
+              child: ExcludeSemantics(
+                child: StoryCanvasView(
+                  document: controller.document,
+                  controller: controller,
+                  interaction: state._interaction,
+                  resources: scope.resources,
+                  resourcesRevision: state._resourcesRevision,
+                  options: scope.config.editor,
+                  strings: scope.strings.editor,
+                  viewScale: scale,
+                  brush: state._brush,
+                  drawing: false,
+                  video: state._playback?.video?.buildView(),
+                  onTap: (_) {},
+                  onFilterSwipe: (_) {},
+                  onStroke: (_) {},
+                  onOverlayAction: (_, _) {},
+                  onOverlayActivate: (_) {},
+                  onCanvasActivate: null,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MainChrome extends StatelessWidget {
+  const _MainChrome({required this.state, required this.scale});
+
+  final _EditorScreenState state;
+  final double scale;
+
+  /// Card padding of the design's controls.
+  static const double inset = 16;
 
   @override
   Widget build(BuildContext context) {
     final controller = state._controller;
     final tool = controller.tool;
     final isVideo = controller.document.media.isVideo;
+    // Tool panels open at the bottom and would cover the thumbnail row.
+    final panelOpen = tool != EditorTool.none && tool != EditorTool.text;
+    const navInset = inset - (48 - StoryNavButton.size) / 2;
     return Stack(
       children: [
-        Positioned(top: 12, left: 12, right: 12, child: _TopBar(state: state)),
-        Positioned(top: 72, right: 12, child: _ToolRail(state: state)),
-        if (isVideo && (tool == EditorTool.none || tool == EditorTool.trim))
+        Positioned(
+          top: 12 - (48 - StoryNavButton.size) / 2,
+          left: navInset,
+          right: navInset,
+          child: _NavRow(state: state),
+        ),
+        _ToolRail(state: state, height: StoryCanvas.height * scale),
+        if (!panelOpen)
           Positioned(
-            left: 12,
-            bottom: tool == EditorTool.trim ? 148 : 16,
-            child: _PlayButton(state: state),
+            left: inset,
+            right: inset,
+            bottom: inset,
+            child: _BottomRow(state: state),
           ),
+        if (isVideo && tool == EditorTool.trim)
+          Positioned(left: 12, bottom: 148, child: _PlayButton(state: state)),
         Positioned(
           left: 0,
           right: 0,
@@ -756,39 +958,27 @@ class _MainChrome extends StatelessWidget {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.state});
+/// Close on the left, confirm (export) on the right.
+class _NavRow extends StatelessWidget {
+  const _NavRow({required this.state});
 
   final _EditorScreenState state;
 
   @override
   Widget build(BuildContext context) {
     final strings = state._scope.strings;
-    final controller = state._controller;
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        EditorIconButton(
-          icon: Icons.close,
+        StoryNavButton(
+          icon: StoryIcons.close,
           label: strings.common.close,
           onPressed: () => unawaited(state._confirmLeave()),
         ),
-        const Spacer(),
-        EditorIconButton(
-          icon: Icons.undo,
-          label: strings.editor.undo,
-          onPressed: controller.canUndo ? controller.undo : null,
-        ),
-        const SizedBox(width: 8),
-        EditorIconButton(
-          icon: Icons.redo,
-          label: strings.editor.redo,
-          onPressed: controller.canRedo ? controller.redo : null,
-        ),
-        const Spacer(),
-        EditorIconButton(
-          icon: Icons.check,
+        StoryNavButton(
+          icon: StoryIcons.check,
           label: strings.editor.export,
-          filled: true,
+          style: StoryNavButtonStyle.accent,
           onPressed: state._export,
         ),
       ],
@@ -796,10 +986,22 @@ class _TopBar extends StatelessWidget {
   }
 }
 
+/// The right-hand tool column: music, text and stickers, then a chevron
+/// that shows or hides the other tools.
 class _ToolRail extends StatelessWidget {
-  const _ToolRail({required this.state});
+  const _ToolRail({required this.state, required this.height});
 
   final _EditorScreenState state;
+
+  /// Height of the canvas the rail sits on.
+  final double height;
+
+  /// Room kept free above (nav row) and below (thumbnail row).
+  static const double _top = 68;
+  static const double _bottom = 84;
+
+  /// Open/close animation of the More tools.
+  static const Duration _toggleDuration = Duration(milliseconds: 280);
 
   @override
   Widget build(BuildContext context) {
@@ -812,37 +1014,39 @@ class _ToolRail extends StatelessWidget {
     final tool = controller.tool;
     final duration = state._videoDuration;
     final minDuration = scope.config.constraints.minVideoDuration;
-    final buttons = <Widget>[
+    final main = <Widget>[
       if (scope.config.musicEnabled)
-        EditorIconButton(
-          icon: Icons.music_note,
+        EditorToolButton(
+          icon: StoryIcons.music,
           label: strings.music,
           selected: document.music != null,
           onPressed: () => unawaited(state._openMusic()),
         ),
       if (options.enableText)
-        EditorIconButton(
-          icon: Icons.text_fields,
+        EditorToolButton(
+          icon: StoryIcons.text,
           label: strings.text,
           onPressed: () => state._startText(null),
         ),
       if (options.enableStickers &&
           (options.stickers.isNotEmpty || options.emojis.isNotEmpty))
-        EditorIconButton(
-          icon: Icons.emoji_emotions,
+        EditorToolButton(
+          icon: StoryIcons.layouts,
           label: strings.stickers,
           selected: tool == EditorTool.stickers,
           onPressed: () => state._toggleTool(EditorTool.stickers),
         ),
+    ];
+    final more = <Widget>[
       if (options.enableDrawing)
-        EditorIconButton(
-          icon: Icons.brush,
+        EditorToolButton(
+          glyph: Icons.brush_outlined,
           label: strings.draw,
           onPressed: () => state._toggleTool(EditorTool.draw),
         ),
       if (options.enableFilters && options.filters.length > 1)
-        EditorIconButton(
-          icon: Icons.filter_vintage,
+        EditorToolButton(
+          glyph: Icons.filter_vintage_outlined,
           label: strings.filters,
           selected: tool == EditorTool.filters,
           onPressed: () => state._toggleTool(EditorTool.filters),
@@ -851,32 +1055,128 @@ class _ToolRail extends StatelessWidget {
           options.enableTrim &&
           duration != null &&
           duration > minDuration)
-        EditorIconButton(
-          icon: Icons.content_cut,
+        EditorToolButton(
+          glyph: Icons.content_cut,
           label: strings.trim,
           selected: tool == EditorTool.trim,
           onPressed: () => state._toggleTool(EditorTool.trim),
         ),
       if (options.enableAudioMix &&
           ((media.isVideo && media.hasAudio) || document.music != null))
-        EditorIconButton(
-          icon: Icons.graphic_eq,
+        EditorToolButton(
+          glyph: Icons.graphic_eq,
           label: strings.audio,
           selected: tool == EditorTool.audio,
           onPressed: () => state._toggleTool(EditorTool.audio),
         ),
       if (document.overlays.isNotEmpty)
-        EditorIconButton(
-          icon: Icons.open_with,
+        EditorToolButton(
+          glyph: Icons.open_with,
           label: strings.adjust,
           selected: tool == EditorTool.adjust,
           onPressed: () => state._toggleTool(EditorTool.adjust),
         ),
+      EditorToolButton(
+        glyph: Icons.undo,
+        label: strings.undo,
+        onPressed: controller.canUndo ? controller.undo : null,
+      ),
+      EditorToolButton(
+        glyph: Icons.redo,
+        label: strings.redo,
+        onPressed: controller.canRedo ? controller.redo : null,
+      ),
     ];
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    final expanded = state._moreTools;
+    final chevron = EditorToolButton(
+      key: EditorKeys.moreTools,
+      // Rotated by the column: points down when collapsed, up when open.
+      glyph: Icons.keyboard_arrow_down,
+      label: expanded ? strings.fewerTools : strings.moreTools,
+      onPressed: state._toggleMoreTools,
+    );
+    // The main icons are centred on the canvas and the More tools grow
+    // downwards. The top is worked out once for the fully expanded column
+    // (raised only if that would reach the thumbnail row), so the main
+    // icons never move while the column opens or closes.
+    final mainHeight = EditorToolColumn.heightFor(
+      main.isEmpty ? 1 : main.length,
+    );
+    final centred = (height - mainHeight) / 2;
+    final expandedHeight = AnimatedEditorToolColumn.heightFor(
+      main.length,
+      more.length,
+      1,
+    );
+    final top = math.max(
+      _top,
+      math.min(centred, height - _bottom - expandedHeight),
+    );
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: expanded ? 1 : 0),
+      duration: reduceMotion ? Duration.zero : _toggleDuration,
+      curve: Curves.easeOutCubic,
+      builder: (context, progress, _) {
+        return Positioned(
+          top: top,
+          // The 20 px icons end 16 px from the card edge.
+          right:
+              _MainChrome.inset -
+              (EditorToolButton.target - EditorToolButton.iconSize) / 2,
+          child: AnimatedEditorToolColumn(
+            main: main,
+            more: more,
+            chevron: chevron,
+            progress: progress,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Gallery thumbnail (replace media), play/pause for videos and the music
+/// chip.
+class _BottomRow extends StatelessWidget {
+  const _BottomRow({required this.state});
+
+  final _EditorScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = state._scope.strings.editor;
+    final document = state._controller.document;
+    final music = document.music;
+    final replace = state._importing
+        ? null
+        : () => unawaited(state._replaceMedia());
+    return Row(
+      spacing: 8,
       children: [
-        for (final button in buttons) ...[button, const SizedBox(height: 8)],
+        if (state._galleryEnabled)
+          Semantics(
+            key: EditorKeys.replaceMedia,
+            button: true,
+            enabled: replace != null,
+            label: strings.replaceMedia,
+            excludeSemantics: true,
+            onTap: replace,
+            child: GalleryShortcut(onPressed: replace),
+          ),
+        if (document.media.isVideo) _PlayButton(state: state),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: music == null
+                ? null
+                : MusicChip(
+                    key: EditorKeys.musicChip,
+                    music: music,
+                    onPressed: () => unawaited(state._openMusic()),
+                  ),
+          ),
+        ),
       ],
     );
   }

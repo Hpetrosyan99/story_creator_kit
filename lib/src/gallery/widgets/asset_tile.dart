@@ -7,8 +7,8 @@ import '../../core/story_scope.dart';
 import '../../services/gallery/gallery_source.dart';
 import '../gallery_keys.dart';
 
-/// One photo or video in the grid: thumbnail, video duration badge and a
-/// selection circle. While the item is being loaded (e.g. downloaded from
+/// One 9:16 photo or video in the grid: thumbnail, video duration and a
+/// 20 px selection circle. While the item is being loaded (e.g. downloaded from
 /// iCloud) a progress overlay shows; tapping again cancels.
 class AssetTile extends StatelessWidget {
   /// Creates the tile.
@@ -73,34 +73,39 @@ class AssetTile extends StatelessWidget {
               if (isVideo && duration != null)
                 Positioned(
                   right: 6,
-                  bottom: 6,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: theme.scrim,
-                      borderRadius: BorderRadius.circular(theme.chipRadius),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      child: Text(
-                        formatStoryDuration(duration),
-                        style: theme.labelStyle,
-                      ),
+                  bottom: 4,
+                  child: Text(
+                    formatStoryDuration(duration),
+                    style: theme.labelStyle.copyWith(
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(
+                          color: theme.scrim,
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               Positioned(
-                top: 6,
-                right: 6,
+                top: 4,
+                right: 4,
                 child: SizedBox.square(
-                  dimension: 22,
+                  dimension: 20,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: loading != null ? theme.accent : theme.scrim,
+                      color: loading != null ? theme.accent : null,
                       border: Border.all(color: theme.onSurface, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.scrim.withValues(
+                            alpha: theme.scrim.a * 0.5,
+                          ),
+                          blurRadius: 2.5,
+                        ),
+                      ],
                     ),
                   ),
                 ),

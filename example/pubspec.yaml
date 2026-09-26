@@ -73,6 +73,9 @@ flutter:
   # Inter and Playfair Display are variable fonts: select heavier weights
   # with `FontVariation('wght', 700)` rather than FontWeight alone.
   fonts:
+    - family: Onest
+      fonts:
+        - asset: assets/fonts/Onest-Variable.ttf
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter-Variable.ttf

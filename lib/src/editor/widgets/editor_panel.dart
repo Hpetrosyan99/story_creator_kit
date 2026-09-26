@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/story_scope.dart';
 
-/// Container for a tool's controls at the bottom of the canvas.
+/// Container for a tool's controls at the bottom of the canvas: the
+/// design's `surface` sheet with 20 px top corners.
 class EditorPanel extends StatelessWidget {
   /// Creates a panel.
   const EditorPanel({required this.child, this.padding, super.key});
@@ -14,15 +15,16 @@ class EditorPanel extends StatelessWidget {
   /// Inner padding.
   final EdgeInsetsGeometry? padding;
 
+  /// Top corner radius (the design's radius xl).
+  static const double radius = 20;
+
   @override
   Widget build(BuildContext context) {
     final theme = StoryScope.of(context).theme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: theme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(theme.cornerRadius),
-        ),
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(radius)),
       ),
       child: Padding(
         padding: padding ?? const EdgeInsets.fromLTRB(12, 12, 12, 16),

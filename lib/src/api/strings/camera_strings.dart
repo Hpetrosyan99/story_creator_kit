@@ -61,6 +61,11 @@ class CameraStrings {
     this.galleryLoadFailed = 'The photo library could not be loaded.',
     this.selectAlbum = 'Select album',
     this.zoomLevel = 'Zoom',
+    this.videoMode = 'Video',
+    this.photoMode = 'Photo',
+    this.captureMode = 'Capture mode',
+    this.videoModeHint = 'Tap to start or stop recording',
+    this.textStory = 'Create a text story',
   });
 
   /// Shutter semantics label in photo mode.
@@ -201,4 +206,20 @@ class CameraStrings {
 
   /// Semantics label prefix of the zoom indicator (followed by the factor).
   final String zoomLevel;
+
+  /// Video option of the capture mode toggle.
+  final String videoMode;
+
+  /// Photo option of the capture mode toggle.
+  final String photoMode;
+
+  /// Semantics label of the capture mode toggle ("Video | Photo").
+  final String captureMode;
+
+  /// Semantics hint of the shutter in video mode.
+  final String videoModeHint;
+
+  /// Label of the camera's text button, which starts a story on a plain
+  /// gradient background.
+  final String textStory;
 }

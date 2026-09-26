@@ -87,6 +87,15 @@ void main() {
 
   Future<void> tapLabel(WidgetTester tester, String text) async {
     step = 'tap $text';
+    // Secondary editor tools sit behind "More tools".
+    for (var i = 0; i < 10 && label(text).evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    if (label(text).evaluate().isEmpty &&
+        label('More tools').evaluate().isNotEmpty) {
+      await tester.tap(label('More tools').last);
+      await settle(tester);
+    }
     await pumpUntil(tester, label(text), reason: 'control "$text"');
     await tester.tap(label(text).last);
     await settle(tester);
@@ -99,12 +108,12 @@ void main() {
     await tapLabel(tester, 'Share story');
     await pumpUntil(
       tester,
-      find.text('Use story'),
+      label('Use story'),
       timeout: timeout,
       reason: 'preview after export',
     );
     await settle(tester, 1000);
-    await tester.tap(find.text('Use story'));
+    await tester.tap(label('Use story').last);
     await pumpUntil(
       tester,
       find.byKey(const ValueKey('result-page')),
@@ -161,12 +170,12 @@ void main() {
     await shot(tester, '10_filters');
     await tapLabel(tester, 'Filters');
     await tapLabel(tester, 'Music');
-    await pumpUntil(tester, find.byTooltip('Use this track'));
+    await pumpUntil(tester, find.byKey(const ValueKey('music-track-select')));
     await shot(tester, '11_music');
-    await tester.tap(find.byTooltip('Use this track').first);
+    await tester.tap(find.byKey(const ValueKey('music-track-select')).first);
     await pumpUntil(tester, find.byKey(const ValueKey('music-segment-window')));
     await shot(tester, '12_segment');
-    await tester.tap(find.byTooltip('Done').last);
+    await tester.tap(find.byKey(const ValueKey('music-segment-done')));
     await pumpUntil(tester, label('Share story'));
     await shot(tester, '13_editor_done');
     await tapLabel(tester, 'Share story');
@@ -174,12 +183,36 @@ void main() {
     debugPrint('SHOT:14_exporting');
     await pumpUntil(
       tester,
-      find.text('Use story'),
+      label('Use story'),
       timeout: const Duration(seconds: 240),
     );
     await shot(tester, '15_preview');
-    await tester.tap(find.text('Use story'));
+    await tester.tap(label('Use story').last);
     await pumpUntil(tester, find.byKey(const ValueKey('result-page')));
     await shot(tester, '16_result');
+  });
+
+  testWidgets('screenshot tour: liquid glass', (tester) async {
+    await tester.pumpWidget(const StoryKitExampleApp());
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('liquid-glass')),
+      200,
+    );
+    await tester.tap(find.byKey(const ValueKey('liquid-glass')));
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('create-story')),
+      -200,
+    );
+    await tester.tap(find.byKey(const ValueKey('create-story')));
+    await pumpUntil(
+      tester,
+      find.byKey(const ValueKey<String>('story_camera_preview')),
+    );
+    await shot(tester, '20_glass_camera');
+    await tester.tap(find.byKey(_shutter));
+    await pumpUntil(tester, label('Share story'), reason: 'editor');
+    await shot(tester, '21_glass_editor');
   });
 }

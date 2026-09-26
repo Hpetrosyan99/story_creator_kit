@@ -6,6 +6,7 @@ import 'package:story_creator_kit/services.dart';
 import 'package:story_creator_kit/src/camera/camera_keys.dart';
 import 'package:story_creator_kit/src/gallery/gallery_keys.dart';
 import 'package:story_creator_kit/src/gallery/gallery_sheet.dart';
+import 'package:story_creator_kit/src/ui/story_icon.dart';
 import 'package:story_creator_kit/story_creator_kit.dart';
 
 import '../../fakes/fake_services.dart';
@@ -68,6 +69,37 @@ void main() {
     expect(find.text('0:18'), findsOneWidget);
     expect(find.text(strings.recent), findsOneWidget);
     expect(find.bySemanticsLabel('${strings.videoItem}, 0:16'), findsOneWidget);
+  });
+
+  testWidgets('design: 9:16 tiles in 3 columns with 4 px margins', (
+    tester,
+  ) async {
+    h = harness();
+    await openSheet(tester);
+
+    final screen = tester.getSize(find.byKey(GalleryKeys.sheet));
+    final camera = tester.getRect(find.byKey(GalleryKeys.cameraTile));
+    final first = tester.getRect(find.byKey(GalleryKeys.tile('a0')));
+    expect(camera.left, 4);
+    expect(camera.width, closeTo((screen.width - 8 - 4) / 3, 0.01));
+    expect(camera.width / camera.height, closeTo(1080 / 1920, 0.01));
+    expect(first.left - camera.right, closeTo(2, 0.01));
+    expect(
+      find.descendant(
+        of: find.byKey(GalleryKeys.cameraTile),
+        matching: find.byWidgetPredicate(
+          (w) => w is StoryIcon && w.icon == StoryIcons.camera,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is StoryIcon && w.icon == StoryIcons.chevronLeft,
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('tapping a tile imports it and closes the sheet', (tester) async {

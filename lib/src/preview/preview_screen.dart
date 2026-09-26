@@ -6,10 +6,13 @@ import 'package:flutter/material.dart';
 import '../api/config/output_options.dart';
 import '../api/errors/story_exception.dart';
 import '../api/result/story_result.dart';
-import '../api/theme/story_creator_theme.dart';
 import '../core/story_scope.dart';
 import '../services/export/story_exporter.dart';
 import '../services/video/video_session.dart';
+import '../ui/story_icon.dart';
+import '../ui/story_nav_button.dart';
+import '../ui/story_stage.dart';
+import '../ui/story_surface.dart';
 import 'widgets/preview_toast.dart';
 
 /// Plays the exported file; confirm or go back to editing.
@@ -147,101 +150,64 @@ class _PreviewScreenState extends State<PreviewScreen> {
           _back();
         }
       },
-      child: ColoredBox(
-        color: theme.background,
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Column(
+      child: StoryStage(
+        card: Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(
+              color: theme.surface,
+              child: _isVideo
+                  ? Semantics(
+                      label: strings.export.videoPreview,
+                      child: _VideoPreview(session: _video),
+                    )
+                  : Image.file(
+                      File(widget.story.path),
+                      fit: BoxFit.cover,
+                      semanticLabel: strings.export.photoPreview,
+                      gaplessPlayback: true,
+                    ),
+            ),
+            Positioned(
+              top: 10,
+              left: 14,
+              right: 14,
+              child: Row(
                 children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 9 / 16,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              theme.cornerRadius,
-                            ),
-                            child: ColoredBox(
-                              color: theme.surface,
-                              child: _isVideo
-                                  ? Semantics(
-                                      label: strings.export.videoPreview,
-                                      child: _VideoPreview(session: _video),
-                                    )
-                                  : Image.file(
-                                      File(widget.story.path),
-                                      fit: BoxFit.cover,
-                                      semanticLabel:
-                                          strings.export.photoPreview,
-                                      gaplessPlayback: true,
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  StoryNavButton(
+                    icon: StoryIcons.close,
+                    label: strings.export.backToEditor,
+                    onPressed: _back,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: Row(
-                      children: [
-                        _PillButton(
-                          label: strings.export.backToEditor,
-                          icon: Icons.edit_outlined,
-                          theme: theme,
-                          onPressed: _back,
-                        ),
-                        if (showSave) ...[
-                          const SizedBox(width: 8),
-                          _PillButton(
-                            label: _saved
-                                ? strings.export.savedLabel
-                                : strings.export.saveToGallery,
-                            icon: _saved
-                                ? Icons.check_rounded
-                                : Icons.download_rounded,
-                            theme: theme,
-                            busy: _saving,
-                            onPressed: _saved || _saving ? null : _save,
-                            iconOnly: true,
-                          ),
-                        ],
-                        const Spacer(),
-                        FilledButton(
-                          onPressed: _confirm,
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(128, 48),
-                            backgroundColor: theme.accent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                theme.chipRadius * 2,
-                              ),
-                            ),
-                          ),
-                          child: Text(
-                            strings.export.useStory,
-                            style: theme.labelStyle.copyWith(
-                              color: theme.onAccent,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Spacer(),
+                  StoryNavButton(
+                    icon: StoryIcons.check,
+                    label: strings.export.useStory,
+                    style: StoryNavButtonStyle.accent,
+                    onPressed: _confirm,
                   ),
                 ],
               ),
+            ),
+            if (showSave)
               Positioned(
-                left: 16,
                 right: 16,
-                bottom: 80,
-                child: PreviewToast(controller: _toast, theme: theme),
+                bottom: 16,
+                child: _SaveButton(
+                  label: _saved
+                      ? strings.export.savedLabel
+                      : strings.export.saveToGallery,
+                  saved: _saved,
+                  onPressed: _saved || _saving ? null : _save,
+                ),
               ),
-            ],
-          ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 88,
+              child: PreviewToast(controller: _toast, theme: theme),
+            ),
+          ],
         ),
       ),
     );
@@ -280,59 +246,45 @@ class _VideoPreview extends StatelessWidget {
   }
 }
 
-class _PillButton extends StatelessWidget {
-  const _PillButton({
+/// Save-to-gallery pill on the preview card.
+class _SaveButton extends StatelessWidget {
+  const _SaveButton({
     required this.label,
-    required this.icon,
-    required this.theme,
+    required this.saved,
     required this.onPressed,
-    this.busy = false,
-    this.iconOnly = false,
   });
 
   final String label;
-  final IconData icon;
-  final StoryCreatorTheme theme;
+  final bool saved;
   final VoidCallback? onPressed;
-  final bool busy;
-  final bool iconOnly;
 
   @override
   Widget build(BuildContext context) {
-    final t = theme;
-    final content = busy
-        ? SizedBox.square(
-            dimension: 18,
-            child: CircularProgressIndicator(strokeWidth: 2, color: t.accent),
-          )
-        : Icon(icon, color: t.onSurface, size: 20);
+    final theme = StoryScope.of(context).theme;
     return Semantics(
       button: true,
       label: label,
       enabled: onPressed != null,
       excludeSemantics: true,
-      child: Material(
-        color: t.surfaceVariant,
-        shape: const StadiumBorder(),
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: onPressed,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: iconOnly ? 12 : 16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  content,
-                  if (!iconOnly) ...[
-                    const SizedBox(width: 8),
-                    Text(label, style: t.labelStyle),
-                  ],
-                ],
+      onTap: onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: StorySurface(
+          fill: theme.pillBackground,
+          radius: 22,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              Icon(
+                saved ? Icons.check_rounded : Icons.download_rounded,
+                color: theme.onSurface,
+                size: 20,
               ),
-            ),
+              Text(label, style: theme.bodyStyle),
+            ],
           ),
         ),
       ),

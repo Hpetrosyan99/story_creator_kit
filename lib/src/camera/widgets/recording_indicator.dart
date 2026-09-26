@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../core/story_scope.dart';
+import '../../ui/story_surface.dart';
 import '../camera_keys.dart';
 
 /// Formats [d] as `m:ss` (or `h:mm:ss`).
@@ -15,7 +16,7 @@ String formatStoryDuration(Duration d) {
   return '$minutes:$seconds';
 }
 
-/// Red dot and elapsed time while recording.
+/// Red dot and elapsed time while recording, on a translucent pill.
 class RecordingIndicator extends StatelessWidget {
   /// Creates the indicator.
   const RecordingIndicator({required this.elapsed, super.key});
@@ -35,34 +36,30 @@ class RecordingIndicator extends StatelessWidget {
           key: CameraKeys.recordingIndicator,
           label: '${scope.strings.camera.recording} $text',
           excludeSemantics: true,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: theme.controlBackground,
-              borderRadius: BorderRadius.circular(theme.chipRadius),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox.square(
-                    dimension: 8,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: theme.error,
-                        shape: BoxShape.circle,
-                      ),
+          child: StorySurface(
+            fill: theme.pillBackground,
+            radius: 17,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox.square(
+                  dimension: 8,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: theme.error,
+                      shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    text,
-                    style: theme.labelStyle.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  text,
+                  style: theme.titleStyle.copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );

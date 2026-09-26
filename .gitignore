@@ -55,3 +55,4 @@ key.properties
 !.env.example
 google-services.json
 GoogleService-Info.plist
+docs/demo/*.mp4

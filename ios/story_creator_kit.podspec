@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'story_creator_kit'
-  s.version          = '0.1.0'
+  s.version          = '0.2.0'
   s.summary          = 'Native export engine for story_creator_kit.'
   s.description      = <<-DESC
 AVFoundation export, probing, waveform and thumbnails for story_creator_kit.

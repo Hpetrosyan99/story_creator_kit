@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:story_creator_kit/services.dart';
 import 'package:story_creator_kit/src/camera/camera_keys.dart';
+import 'package:story_creator_kit/src/camera/text_story_background.dart';
+import 'package:story_creator_kit/src/ui/story_icon.dart';
 import 'package:story_creator_kit/story_creator_kit.dart';
 
 import '../../fakes/fake_services.dart';
@@ -384,6 +387,202 @@ void main() {
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       handle.dispose();
+    });
+  });
+
+  group('design', () {
+    Finder storyIcon(StoryIcons icon) =>
+        find.byWidgetPredicate((w) => w is StoryIcon && w.icon == icon);
+
+    testWidgets('no spinner while the camera starts; chrome is shown', (
+      tester,
+    ) async {
+      h = CameraHarness();
+      usePhoneView(tester);
+      await tester.pumpWidget(h.screen());
+
+      // First frame: the camera is still starting.
+      expect(find.byKey(CameraKeys.starting), findsOneWidget);
+      expect(find.byKey(CameraKeys.preview), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byKey(CameraKeys.close), findsOneWidget);
+      expect(find.byKey(CameraKeys.shutter), findsOneWidget);
+
+      await settle(tester);
+      expect(find.byKey(CameraKeys.preview), findsOneWidget);
+      expect(find.byKey(CameraKeys.starting), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('importing a photo shows no spinner', (tester) async {
+      h = CameraHarness();
+      await h.pump(tester);
+
+      await tester.tap(shutter);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byKey(CameraKeys.busy), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+
+      await settle(tester);
+      expect(h.media, hasLength(1));
+    });
+
+    testWidgets('the shutter swaps to the red recording SVG', (tester) async {
+      h = CameraHarness(
+        inspector: FakeMediaInspector(
+          defaultProbe: videoProbe(const Duration(seconds: 2)),
+        ),
+      );
+      await h.pump(tester);
+      expect(storyIcon(StoryIcons.shutterPhoto), findsOneWidget);
+      expect(storyIcon(StoryIcons.shutterRecording), findsNothing);
+
+      final gesture = await holdShutter(tester, shutter);
+      expect(storyIcon(StoryIcons.shutterRecording), findsOneWidget);
+      expect(storyIcon(StoryIcons.shutterPhoto), findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+      await gesture.up();
+      await settle(tester);
+      expect(storyIcon(StoryIcons.shutterPhoto), findsOneWidget);
+    });
+
+    testWidgets('video mode: tap starts and tap stops a recording', (
+      tester,
+    ) async {
+      h = CameraHarness(
+        inspector: FakeMediaInspector(
+          defaultProbe: videoProbe(const Duration(seconds: 2)),
+        ),
+      );
+      await h.pump(tester);
+      final toggle = find.byKey(CameraKeys.captureMode);
+      expect(toggle, findsOneWidget);
+      expect(
+        tester.getSemantics(toggle),
+        matchesSemantics(
+          label: strings.captureMode,
+          value: strings.photoMode,
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+
+      await tester.tap(find.text(strings.videoMode));
+      await tester.pump();
+      expect(tester.getSemantics(toggle).value, strings.videoMode);
+
+      await tester.tap(shutter);
+      await tester.pump();
+      expect(h.capture.isRecording, isTrue);
+      expect(h.capture.calls, isNot(contains('photo')));
+      // The toggle is hidden while recording.
+      expect(toggle, findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.tap(shutter);
+      await settle(tester);
+      expect(h.capture.isRecording, isFalse);
+      expect(h.media.single.type, StoryMediaType.video);
+    });
+
+    testWidgets('video mode: holding still records while pressed', (
+      tester,
+    ) async {
+      h = CameraHarness(
+        inspector: FakeMediaInspector(
+          defaultProbe: videoProbe(const Duration(seconds: 2)),
+        ),
+      );
+      await h.pump(tester);
+      await tester.tap(find.text(strings.videoMode));
+      await tester.pump();
+
+      final gesture = await holdShutter(tester, shutter);
+      expect(h.capture.isRecording, isTrue);
+      await tester.pump(const Duration(seconds: 2));
+      await gesture.up();
+      await settle(tester);
+      expect(h.capture.isRecording, isFalse);
+      expect(h.media.single.type, StoryMediaType.video);
+    });
+
+    testWidgets('photo mode again: tap takes a photo', (tester) async {
+      h = CameraHarness();
+      await h.pump(tester);
+      await tester.tap(find.text(strings.videoMode));
+      await tester.pump();
+      await tester.tap(find.text(strings.photoMode));
+      await tester.pump();
+
+      await tester.tap(shutter);
+      await settle(tester);
+      expect(h.capture.calls, contains('photo'));
+      expect(h.media.single.type, StoryMediaType.photo);
+    });
+
+    testWidgets('the toggle is hidden when only one capture type is enabled', (
+      tester,
+    ) async {
+      h = CameraHarness(
+        config: const StoryCreatorConfig(
+          capture: CaptureOptions(enableVideo: false),
+        ),
+      );
+      await h.pump(tester);
+      expect(find.byKey(CameraKeys.captureMode), findsNothing);
+    });
+
+    testWidgets('the text CTA starts a story on a gradient photo', (
+      tester,
+    ) async {
+      h = CameraHarness();
+      await h.pump(tester);
+
+      await tester.tap(find.byKey(CameraKeys.textStory));
+      await settle(tester, rounds: 12);
+
+      final media = h.media.single;
+      expect(media.type, StoryMediaType.photo);
+      expect(media.path, startsWith(h.session.directory.path));
+      expect(media.path, endsWith('.png'));
+      final bytes = File(media.path).readAsBytesSync();
+      final size = await tester.runAsync(() async {
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        final image = frame.image;
+        final result = (image.width, image.height);
+        image.dispose();
+        codec.dispose();
+        return result;
+      });
+      expect(size, (1080, 1920));
+    });
+
+    testWidgets('the text CTA is hidden when photos are not allowed', (
+      tester,
+    ) async {
+      h = CameraHarness(
+        config: const StoryCreatorConfig(
+          constraints: MediaConstraints(allowPhotos: false),
+        ),
+      );
+      await h.pump(tester);
+      expect(find.byKey(CameraKeys.textStory), findsNothing);
+    });
+
+    test('text story colours come from the text palette', () {
+      const theme = StoryCreatorTheme();
+      final (top, bottom) = textStoryColors(const EditorOptions(), theme);
+      expect(top, const Color(0xFFE4572E));
+      expect(bottom, const Color(0xFF000000));
+      final (fallbackTop, fallbackBottom) = textStoryColors(
+        const EditorOptions(textColors: []),
+        theme,
+      );
+      expect(fallbackTop, theme.accent);
+      expect(fallbackBottom, theme.background);
     });
   });
 

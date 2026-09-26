@@ -15,6 +15,7 @@ class SampleMusicProvider extends StoryMusicProvider {
   static const _leaderboard = MusicCategory(
     id: 'leaderboard',
     label: 'Leaderboard',
+    showRanks: true,
   );
 
   static const _tracks = <_SampleTrack>[

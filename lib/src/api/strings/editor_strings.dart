@@ -71,6 +71,10 @@ class EditorStrings {
     this.stickerUnavailable = 'This sticker could not be loaded.',
     this.videoUnavailable = 'The video could not be played.',
     this.musicUnavailable = 'The music could not be played.',
+    this.moreTools = 'More tools',
+    this.fewerTools = 'Fewer tools',
+    this.replaceMedia = 'Replace photo or video',
+    this.selectedMusic = 'Selected music',
   });
 
   static String _defaultColorSwatch(int number) => 'Colour $number';
@@ -266,4 +270,18 @@ class EditorStrings {
 
   /// Notice when the selected music cannot be played in the editor.
   final String musicUnavailable;
+
+  /// Semantics label of the chevron that shows the remaining tools.
+  final String moreTools;
+
+  /// Semantics label of the chevron that hides them again.
+  final String fewerTools;
+
+  /// Semantics label of the gallery thumbnail that swaps the story's media
+  /// and keeps the edits.
+  final String replaceMedia;
+
+  /// Semantics label of the music chip (its value is the track and artist);
+  /// tapping it changes the music.
+  final String selectedMusic;
 }

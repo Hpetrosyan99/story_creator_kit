@@ -93,11 +93,11 @@ void main() {
   testWidgets('photo: "Use story" confirms without a save', (tester) async {
     await pump(tester, photo());
     expect(find.bySemanticsLabel(_strings.photoPreview), findsOneWidget);
-    await tester.tap(find.text(_strings.useStory));
+    await tester.tap(find.bySemanticsLabel(_strings.useStory));
     await tester.pump();
     expect(confirms, [false]);
     // A second tap does nothing.
-    await tester.tap(find.text(_strings.useStory));
+    await tester.tap(find.bySemanticsLabel(_strings.useStory));
     expect(confirms, [false]);
   });
 
@@ -129,7 +129,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel(_strings.savedLabel));
     await tester.pump();
     expect(saver.saved, hasLength(1));
-    await tester.tap(find.text(_strings.useStory));
+    await tester.tap(find.bySemanticsLabel(_strings.useStory));
     expect(confirms, [true]);
     await tester.pump(const Duration(seconds: 3));
     expect(find.text(_strings.savedToGallery), findsNothing);
@@ -146,7 +146,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel(_strings.saveToGallery));
     await tester.pump();
     expect(saver.saved, hasLength(1));
-    await tester.tap(find.text(_strings.useStory));
+    await tester.tap(find.bySemanticsLabel(_strings.useStory));
     expect(confirms, [true]);
     await tester.pump(const Duration(seconds: 3));
   });
@@ -164,7 +164,7 @@ void main() {
     expect(video.range, isNull);
     expect(video.state.value.playing, isTrue);
     expect(find.bySemanticsLabel(_strings.videoPreview), findsOneWidget);
-    await tester.tap(find.text(_strings.useStory));
+    await tester.tap(find.bySemanticsLabel(_strings.useStory));
     expect(confirms, [false]);
     expect(video.state.value.playing, isFalse);
   });

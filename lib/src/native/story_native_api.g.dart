@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show immutable, protected, visibleForTesting;
 
 Object? _extractReplyValueOrThrow(
-    List<Object?>? replyList,
-    String channelName, {
-    required bool isNullValid,
+  List<Object?>? replyList,
+  String channelName, {
+  required bool isNullValid,
 }) {
   if (replyList == null) {
     throw PlatformException(
@@ -34,8 +34,11 @@ Object? _extractReplyValueOrThrow(
   return replyList.firstOrNull;
 }
 
-
-List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty = false}) {
+List<Object?> wrapResponse({
+  Object? result,
+  PlatformException? error,
+  bool empty = false,
+}) {
   if (empty) {
     return <Object?>[];
   }
@@ -44,6 +47,7 @@ List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty
   }
   return <Object?>[error.code, error.message, error.details];
 }
+
 bool _deepEquals(Object? a, Object? b) {
   if (identical(a, b)) {
     return true;
@@ -56,8 +60,9 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -106,7 +111,6 @@ int _deepHash(Object? value) {
   return value.hashCode;
 }
 
-
 /// A rectangle in output pixels (origin top-left).
 class NativeRect {
   NativeRect({
@@ -125,16 +129,12 @@ class NativeRect {
   double height;
 
   List<Object?> _toList() {
-    return <Object?>[
-      left,
-      top,
-      width,
-      height,
-    ];
+    return <Object?>[left, top, width, height];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeRect decode(Object result) {
     result as List<Object?>;
@@ -155,7 +155,10 @@ class NativeRect {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(left, other.left) && _deepEquals(top, other.top) && _deepEquals(width, other.width) && _deepEquals(height, other.height);
+    return _deepEquals(left, other.left) &&
+        _deepEquals(top, other.top) &&
+        _deepEquals(width, other.width) &&
+        _deepEquals(height, other.height);
   }
 
   @override
@@ -186,15 +189,12 @@ class NativeAudioTrack {
   double volume;
 
   List<Object?> _toList() {
-    return <Object?>[
-      path,
-      startMs,
-      volume,
-    ];
+    return <Object?>[path, startMs, volume];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeAudioTrack decode(Object result) {
     result as List<Object?>;
@@ -214,7 +214,9 @@ class NativeAudioTrack {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(path, other.path) && _deepEquals(startMs, other.startMs) && _deepEquals(volume, other.volume);
+    return _deepEquals(path, other.path) &&
+        _deepEquals(startMs, other.startMs) &&
+        _deepEquals(volume, other.volume);
   }
 
   @override
@@ -250,17 +252,12 @@ class NativeOutput {
   int videoBitrate;
 
   List<Object?> _toList() {
-    return <Object?>[
-      path,
-      width,
-      height,
-      frameRate,
-      videoBitrate,
-    ];
+    return <Object?>[path, width, height, frameRate, videoBitrate];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeOutput decode(Object result) {
     result as List<Object?>;
@@ -282,7 +279,11 @@ class NativeOutput {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(path, other.path) && _deepEquals(width, other.width) && _deepEquals(height, other.height) && _deepEquals(frameRate, other.frameRate) && _deepEquals(videoBitrate, other.videoBitrate);
+    return _deepEquals(path, other.path) &&
+        _deepEquals(width, other.width) &&
+        _deepEquals(height, other.height) &&
+        _deepEquals(frameRate, other.frameRate) &&
+        _deepEquals(videoBitrate, other.videoBitrate);
   }
 
   @override
@@ -365,7 +366,8 @@ class VideoExportRequest {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static VideoExportRequest decode(Object result) {
     result as List<Object?>;
@@ -393,7 +395,17 @@ class VideoExportRequest {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(jobId, other.jobId) && _deepEquals(sourcePath, other.sourcePath) && _deepEquals(trimStartMs, other.trimStartMs) && _deepEquals(trimEndMs, other.trimEndMs) && _deepEquals(videoRect, other.videoRect) && _deepEquals(mirror, other.mirror) && _deepEquals(colorMatrix, other.colorMatrix) && _deepEquals(overlayPngPath, other.overlayPngPath) && _deepEquals(originalVolume, other.originalVolume) && _deepEquals(music, other.music) && _deepEquals(output, other.output);
+    return _deepEquals(jobId, other.jobId) &&
+        _deepEquals(sourcePath, other.sourcePath) &&
+        _deepEquals(trimStartMs, other.trimStartMs) &&
+        _deepEquals(trimEndMs, other.trimEndMs) &&
+        _deepEquals(videoRect, other.videoRect) &&
+        _deepEquals(mirror, other.mirror) &&
+        _deepEquals(colorMatrix, other.colorMatrix) &&
+        _deepEquals(overlayPngPath, other.overlayPngPath) &&
+        _deepEquals(originalVolume, other.originalVolume) &&
+        _deepEquals(music, other.music) &&
+        _deepEquals(output, other.output);
   }
 
   @override
@@ -428,17 +440,12 @@ class StillVideoExportRequest {
   NativeOutput output;
 
   List<Object?> _toList() {
-    return <Object?>[
-      jobId,
-      framePath,
-      durationMs,
-      music,
-      output,
-    ];
+    return <Object?>[jobId, framePath, durationMs, music, output];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static StillVideoExportRequest decode(Object result) {
     result as List<Object?>;
@@ -460,7 +467,11 @@ class StillVideoExportRequest {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(jobId, other.jobId) && _deepEquals(framePath, other.framePath) && _deepEquals(durationMs, other.durationMs) && _deepEquals(music, other.music) && _deepEquals(output, other.output);
+    return _deepEquals(jobId, other.jobId) &&
+        _deepEquals(framePath, other.framePath) &&
+        _deepEquals(durationMs, other.durationMs) &&
+        _deepEquals(music, other.music) &&
+        _deepEquals(output, other.output);
   }
 
   @override
@@ -496,17 +507,12 @@ class JpegEncodeRequest {
   String outputPath;
 
   List<Object?> _toList() {
-    return <Object?>[
-      rgba,
-      width,
-      height,
-      quality,
-      outputPath,
-    ];
+    return <Object?>[rgba, width, height, quality, outputPath];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static JpegEncodeRequest decode(Object result) {
     result as List<Object?>;
@@ -528,7 +534,11 @@ class JpegEncodeRequest {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(rgba, other.rgba) && _deepEquals(width, other.width) && _deepEquals(height, other.height) && _deepEquals(quality, other.quality) && _deepEquals(outputPath, other.outputPath);
+    return _deepEquals(rgba, other.rgba) &&
+        _deepEquals(width, other.width) &&
+        _deepEquals(height, other.height) &&
+        _deepEquals(quality, other.quality) &&
+        _deepEquals(outputPath, other.outputPath);
   }
 
   @override
@@ -561,17 +571,12 @@ class NativeExportResult {
   int? durationMs;
 
   List<Object?> _toList() {
-    return <Object?>[
-      path,
-      width,
-      height,
-      fileSizeBytes,
-      durationMs,
-    ];
+    return <Object?>[path, width, height, fileSizeBytes, durationMs];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeExportResult decode(Object result) {
     result as List<Object?>;
@@ -593,7 +598,11 @@ class NativeExportResult {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(path, other.path) && _deepEquals(width, other.width) && _deepEquals(height, other.height) && _deepEquals(fileSizeBytes, other.fileSizeBytes) && _deepEquals(durationMs, other.durationMs);
+    return _deepEquals(path, other.path) &&
+        _deepEquals(width, other.width) &&
+        _deepEquals(height, other.height) &&
+        _deepEquals(fileSizeBytes, other.fileSizeBytes) &&
+        _deepEquals(durationMs, other.durationMs);
   }
 
   @override
@@ -657,7 +666,8 @@ class NativeMediaProbe {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static NativeMediaProbe decode(Object result) {
     result as List<Object?>;
@@ -684,7 +694,16 @@ class NativeMediaProbe {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(width, other.width) && _deepEquals(height, other.height) && _deepEquals(fileSizeBytes, other.fileSizeBytes) && _deepEquals(rotationDegrees, other.rotationDegrees) && _deepEquals(hasVideo, other.hasVideo) && _deepEquals(hasAudio, other.hasAudio) && _deepEquals(durationMs, other.durationMs) && _deepEquals(videoCodec, other.videoCodec) && _deepEquals(audioCodec, other.audioCodec) && _deepEquals(frameRate, other.frameRate);
+    return _deepEquals(width, other.width) &&
+        _deepEquals(height, other.height) &&
+        _deepEquals(fileSizeBytes, other.fileSizeBytes) &&
+        _deepEquals(rotationDegrees, other.rotationDegrees) &&
+        _deepEquals(hasVideo, other.hasVideo) &&
+        _deepEquals(hasAudio, other.hasAudio) &&
+        _deepEquals(durationMs, other.durationMs) &&
+        _deepEquals(videoCodec, other.videoCodec) &&
+        _deepEquals(audioCodec, other.audioCodec) &&
+        _deepEquals(frameRate, other.frameRate);
   }
 
   @override
@@ -697,7 +716,6 @@ class NativeMediaProbe {
   }
 }
 
-
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -705,28 +723,28 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is NativeRect) {
+    } else if (value is NativeRect) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeAudioTrack) {
+    } else if (value is NativeAudioTrack) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeOutput) {
+    } else if (value is NativeOutput) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is VideoExportRequest) {
+    } else if (value is VideoExportRequest) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is StillVideoExportRequest) {
+    } else if (value is StillVideoExportRequest) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is JpegEncodeRequest) {
+    } else if (value is JpegEncodeRequest) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeExportResult) {
+    } else if (value is NativeExportResult) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeMediaProbe) {
+    } else if (value is NativeMediaProbe) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
     } else {
@@ -764,153 +782,174 @@ class StoryNativeApi {
   /// available for dependency injection. If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
   StoryNativeApi({
-      BinaryMessenger? binaryMessenger, 
-      String messageChannelSuffix = '', 
-      })
-      : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
 
   final BinaryMessenger? pigeonVar_binaryMessenger;
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
 
   final String pigeonVar_messageChannelSuffix;
 
-
   Future<NativeExportResult> exportVideo(VideoExportRequest request) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.exportVideo$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.exportVideo$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[request]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[request],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as NativeExportResult;
   }
 
-  Future<NativeExportResult> exportStillVideo(StillVideoExportRequest request) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.exportStillVideo$pigeonVar_messageChannelSuffix';
+  Future<NativeExportResult> exportStillVideo(
+    StillVideoExportRequest request,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.exportStillVideo$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[request]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[request],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as NativeExportResult;
   }
 
   Future<NativeExportResult> encodeJpeg(JpegEncodeRequest request) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.encodeJpeg$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.encodeJpeg$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[request]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[request],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as NativeExportResult;
   }
 
   /// Cancels a running export; its call fails with code 'cancelled' and the
   /// partial output is deleted. No-op for unknown ids.
   Future<void> cancelExport(String jobId) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.cancelExport$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.cancelExport$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[jobId]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[jobId],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Images (JPEG, PNG, HEIC, WebP) and videos.
   Future<NativeMediaProbe> probe(String path) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.probe$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.probe$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[path]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[path],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as NativeMediaProbe;
   }
 
   /// Peak levels 0–1 in [buckets] even slices of the whole file's audio.
   Future<List<double>> waveform(String path, int buckets) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.waveform$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.waveform$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[path, buckets]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[path, buckets],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return (pigeonVar_replyValue! as List<Object?>).cast<double>();
   }
 
   /// JPEG frames at [timesMs], at most [maxWidth] wide, written into
   /// [outputDirectory]; returns paths in the same order.
-  Future<List<String>> thumbnails(String path, List<int> timesMs, int maxWidth, String outputDirectory) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.thumbnails$pigeonVar_messageChannelSuffix';
+  Future<List<String>> thumbnails(
+    String path,
+    List<int> timesMs,
+    int maxWidth,
+    String outputDirectory,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeApi.thumbnails$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[path, timesMs, maxWidth, outputDirectory]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[path, timesMs, maxWidth, outputDirectory],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return (pigeonVar_replyValue! as List<Object?>).cast<String>();
   }
 }
@@ -921,16 +960,20 @@ abstract class StoryNativeEvents {
   /// Progress 0–1 of a running export.
   void onExportProgress(String jobId, double progress);
 
-  static void setUp(StoryNativeEvents? api, {
-    BinaryMessenger? binaryMessenger, 
+  static void setUp(
+    StoryNativeEvents? api, {
+    BinaryMessenger? binaryMessenger,
     String messageChannelSuffix = '',
-  }) 
-{
-    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  }) {
+    messageChannelSuffix = messageChannelSuffix.isNotEmpty
+        ? '.$messageChannelSuffix'
+        : '';
     {
       final pigeonVar_channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.story_creator_kit.StoryNativeEvents.onExportProgress$messageChannelSuffix', pigeonChannelCodec,
-          binaryMessenger: binaryMessenger);
+        'dev.flutter.pigeon.story_creator_kit.StoryNativeEvents.onExportProgress$messageChannelSuffix',
+        pigeonChannelCodec,
+        binaryMessenger: binaryMessenger,
+      );
       if (api == null) {
         pigeonVar_channel.setMessageHandler(null);
       } else {
@@ -943,8 +986,10 @@ abstract class StoryNativeEvents {
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
-          }          catch (e) {
-            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          } catch (e) {
+            return wrapResponse(
+              error: PlatformException(code: 'error', message: e.toString()),
+            );
           }
         });
       }

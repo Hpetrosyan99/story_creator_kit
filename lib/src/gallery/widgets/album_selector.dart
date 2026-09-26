@@ -1,14 +1,16 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../core/story_scope.dart';
 import '../../services/gallery/gallery_source.dart';
+import '../../ui/story_icon.dart';
 import '../gallery_keys.dart';
 
 /// Display name of [album]: the localised "Recent" for the all-media album.
 String galleryAlbumName(BuildContext context, GalleryAlbum album) =>
     album.isAll ? StoryScope.of(context).strings.camera.recent : album.name;
 
-/// The "Recent ›" header button that opens the album list.
+/// The "Recent ›" header button (Body/S Emphasis with a soft shadow and a
+/// chevron) that opens the album list.
 class AlbumSelector extends StatelessWidget {
   /// Creates the selector.
   const AlbumSelector({
@@ -45,28 +47,42 @@ class AlbumSelector extends StatelessWidget {
         onTap: onPressed,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.titleStyle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 2,
+              children: [
+                Flexible(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.bodyEmphasisStyle.copyWith(
+                      shadows: [
+                        Shadow(
+                          color: theme.scrim.withValues(
+                            alpha: theme.scrim.a * 0.6,
+                          ),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              AnimatedRotation(
-                turns: open ? 0.25 : 0,
-                duration: animate
-                    ? const Duration(milliseconds: 160)
-                    : Duration.zero,
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  color: theme.onSurface,
+                AnimatedRotation(
+                  turns: open ? 0.25 : 0,
+                  duration: animate
+                      ? const Duration(milliseconds: 160)
+                      : Duration.zero,
+                  child: StoryIcon(
+                    StoryIcons.chevronRight,
+                    color: theme.onSurface,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -115,7 +131,7 @@ class AlbumList extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: () => onSelected(album),
             child: ColoredBox(
-              color: isSelected ? theme.surfaceVariant : theme.background,
+              color: isSelected ? theme.surface : theme.background,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 56),
                 child: Padding(
@@ -127,7 +143,9 @@ class AlbumList extends StatelessWidget {
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.bodyStyle,
+                          style: isSelected
+                              ? theme.titleStyle
+                              : theme.bodyLargeStyle,
                         ),
                       ),
                       Text('${album.count}', style: theme.captionStyle),

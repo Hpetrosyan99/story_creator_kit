@@ -5,7 +5,11 @@ import 'package:flutter/painting.dart';
 @immutable
 class MusicCategory {
   /// Creates a category.
-  const MusicCategory({required this.id, required this.label});
+  const MusicCategory({
+    required this.id,
+    required this.label,
+    this.showRanks = false,
+  });
 
   /// Identifier passed back in [MusicQuery.categoryId].
   final String id;
@@ -13,11 +17,18 @@ class MusicCategory {
   /// Chip label.
   final String label;
 
-  @override
-  bool operator ==(Object other) => other is MusicCategory && other.id == id;
+  /// Whether the list of this category is a ranking (e.g. "Leaderboard").
+  ///
+  /// When set, each row shows its position (1, 2, 3…) before the artwork,
+  /// and the bookmark button moves into a "more" (⋮) menu.
+  final bool showRanks;
 
   @override
-  int get hashCode => id.hashCode;
+  bool operator ==(Object other) =>
+      other is MusicCategory && other.id == id && other.showRanks == showRanks;
+
+  @override
+  int get hashCode => Object.hash(id, showRanks);
 }
 
 /// A track offered by a `StoryMusicProvider`.

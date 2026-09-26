@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../api/music/music_models.dart';
 import '../../core/story_scope.dart';
+import '../../ui/story_icon.dart';
 
-/// Horizontal row of category chips.
+/// Horizontal row of category chips (28 px high, in a 48 px tap row).
 ///
-/// The selected chip is outlined in the accent colour. When it is not the
-/// first category it also shows a small ✕, and tapping it goes back to the
-/// first category.
+/// The selected chip has a 10 % accent fill, an accent border and a ✕;
+/// tapping it calls [onCleared] (empty the search, back to the first
+/// category). The others have the raised surface colour and an outline.
 class CategoryChips extends StatelessWidget {
   /// Creates the row.
   const CategoryChips({
@@ -27,31 +28,28 @@ class CategoryChips extends StatelessWidget {
   /// Called with a newly tapped category.
   final ValueChanged<MusicCategory> onSelected;
 
-  /// Called when the selected (non-first) chip is tapped.
+  /// Called when the selected chip is tapped.
   final VoidCallback onCleared;
+
+  /// Height of the row (the tap target).
+  static const double rowHeight = 48;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 48,
+    height: rowHeight,
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: categories.length,
       separatorBuilder: (_, _) => const SizedBox(width: 8),
       itemBuilder: (context, index) {
         final category = categories[index];
         final isSelected = category == selected;
-        final clearable = isSelected && index != 0;
         return _CategoryChip(
           key: ValueKey('music-category-${category.id}'),
           category: category,
           selected: isSelected,
-          clearable: clearable,
-          onTap: clearable
-              ? onCleared
-              : isSelected
-              ? null
-              : () => onSelected(category),
+          onTap: isSelected ? onCleared : () => onSelected(category),
         );
       },
     ),
@@ -62,52 +60,55 @@ class _CategoryChip extends StatelessWidget {
   const _CategoryChip({
     required this.category,
     required this.selected,
-    required this.clearable,
     required this.onTap,
     super.key,
   });
 
+  static const double _height = 28;
+
   final MusicCategory category;
   final bool selected;
-  final bool clearable;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scope = StoryScope.of(context);
     final theme = scope.theme;
-    final radius = BorderRadius.circular(theme.chipRadius);
     return Semantics(
       button: true,
       selected: selected,
-      hint: clearable ? scope.strings.music.clearCategory : null,
-      child: InkWell(
+      label: category.label,
+      hint: selected ? scope.strings.music.clearCategory : null,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        borderRadius: radius,
-        child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            height: 34,
-            constraints: const BoxConstraints(minWidth: 48),
-            alignment: Alignment.center,
-            padding: EdgeInsets.only(left: 14, right: clearable ? 8 : 14),
-            decoration: BoxDecoration(
-              color: selected ? null : theme.surfaceVariant,
-              borderRadius: radius,
-              border: Border.all(
-                color: selected ? theme.accent : theme.surfaceVariant,
-                width: 1.5,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 48),
+          child: Center(
+            child: Container(
+              height: _height,
+              alignment: Alignment.center,
+              padding: EdgeInsets.only(left: 12, right: selected ? 6 : 12),
+              decoration: BoxDecoration(
+                color: selected
+                    ? theme.accent.withValues(alpha: 0.1)
+                    : theme.surfaceVariant,
+                borderRadius: BorderRadius.circular(_height / 2),
+                border: Border.all(
+                  color: selected ? theme.accent : theme.outline,
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(category.label, style: theme.labelStyle),
-                if (clearable) ...[
-                  const SizedBox(width: 4),
-                  Icon(Icons.close, size: 14, color: theme.onSurface),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 10,
+                children: [
+                  Text(category.label, style: theme.labelStyle),
+                  if (selected)
+                    StoryIcon(StoryIcons.chipClose, color: theme.accent),
                 ],
-              ],
+              ),
             ),
           ),
         ),

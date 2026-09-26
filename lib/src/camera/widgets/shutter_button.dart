@@ -4,6 +4,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/story_scope.dart';
+import '../../ui/story_icon.dart';
+import '../../ui/story_surface.dart';
 import '../camera_controller.dart';
 import '../camera_keys.dart';
 
@@ -16,18 +18,28 @@ const double kShutterZoomDragDistance = 320;
 /// Delay before a press turns into a recording.
 const Duration kShutterHoldDelay = Duration(milliseconds: 250);
 
-/// The shutter: tap for a photo, press and hold to record (drag up to zoom,
-/// drag left onto the lock to keep recording hands-free). In video-only
-/// mode a tap starts and stops the recording.
+/// The shutter: the design's 60 px shutter icon (red while recording) with
+/// an accent progress ring around it while a recording runs.
 ///
-/// Screen readers get a tap action for the primary function and a long
-/// press action that starts a hands-free recording.
+/// In photo mode a tap takes a photo; in video mode a tap starts and stops
+/// a hands-free recording. In both modes pressing and holding records
+/// (drag up to zoom, drag left onto the lock to keep recording
+/// hands-free). While media is imported the shutter is dimmed.
+///
+/// Screen readers get a tap action for the primary function and, in photo
+/// mode, a long press action that starts a hands-free recording.
 class ShutterButton extends StatefulWidget {
   /// Creates the shutter.
   const ShutterButton({required this.controller, super.key});
 
   /// Camera state.
   final StoryCameraController controller;
+
+  /// Side of the tap target (larger than the 60 px icon).
+  static const double hitSize = 80;
+
+  /// Diameter of the recording progress ring.
+  static const double ringSize = 72;
 
   @override
   State<ShutterButton> createState() => _ShutterButtonState();
@@ -39,10 +51,14 @@ class _ShutterButtonState extends State<ShutterButton> {
 
   StoryCameraController get _c => widget.controller;
 
+  bool get _photoMode =>
+      _c.photoEnabled &&
+      (_c.captureMode == CameraCaptureMode.photo || !_c.videoEnabled);
+
   void _onTap() {
     if (_c.isRecording) {
       _c.stopRecording();
-    } else if (_c.photoEnabled) {
+    } else if (_photoMode) {
       _c.takePhoto();
     } else if (_c.videoEnabled) {
       _startHandsFree();
@@ -105,22 +121,26 @@ class _ShutterButtonState extends State<ShutterButton> {
     final duration = animate
         ? const Duration(milliseconds: 180)
         : Duration.zero;
-    final outer = recording ? 96.0 : 80.0;
+    final photoMode = _photoMode;
     final String label;
+    final String? hint;
     if (recording) {
       label = strings.stopRecording;
-    } else if (_c.photoEnabled) {
+      hint = null;
+    } else if (photoMode) {
       label = strings.takePhoto;
+      hint = _c.videoEnabled ? strings.shutterHint : null;
     } else {
       label = strings.startRecording;
+      hint = strings.videoModeHint;
     }
-    final canHold = _c.videoEnabled && _c.photoEnabled && !recording;
+    final canHold = _c.videoEnabled && photoMode && !recording;
     return Semantics(
       key: CameraKeys.shutter,
       button: true,
       enabled: enabled,
       label: label,
-      hint: canHold ? strings.shutterHint : null,
+      hint: hint,
       onTap: enabled ? _onTap : null,
       onLongPress: enabled && canHold ? _startHandsFree : null,
       child: RawGestureDetector(
@@ -148,47 +168,39 @@ class _ShutterButtonState extends State<ShutterButton> {
                 ),
         },
         child: SizedBox.square(
-          dimension: 100,
+          dimension: ShutterButton.hitSize,
           child: Center(
-            child: AnimatedContainer(
-              duration: duration,
-              width: outer,
-              height: outer,
+            child: SizedBox.square(
+              dimension: ShutterButton.ringSize,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  ValueListenableBuilder<Duration>(
-                    valueListenable: _c.elapsed,
-                    builder: (context, elapsed, _) => CustomPaint(
-                      painter: ShutterRingPainter(
-                        progress: recording
-                            ? (elapsed.inMilliseconds /
+                  if (recording)
+                    ValueListenableBuilder<Duration>(
+                      valueListenable: _c.elapsed,
+                      builder: (context, elapsed, _) => CustomPaint(
+                        painter: ShutterRingPainter(
+                          progress:
+                              (elapsed.inMilliseconds /
                                       math.max(
                                         1,
                                         _c.maxDuration.inMilliseconds,
                                       ))
-                                  .clamp(0.0, 1.0)
-                            : 0,
-                        track: theme.onSurface.withValues(
-                          alpha: recording ? 0.35 : 1,
+                                  .clamp(0.0, 1.0),
+                          track: theme.onSurface.withValues(alpha: 0.3),
+                          progressColor: theme.accent,
+                          strokeWidth: 3,
                         ),
-                        progressColor: theme.accent,
-                        strokeWidth: recording ? 6 : 4,
                       ),
                     ),
-                  ),
                   Center(
-                    child: AnimatedContainer(
+                    child: AnimatedOpacity(
                       duration: duration,
-                      width: recording ? 32 : 64,
-                      height: recording ? 32 : 64,
-                      decoration: BoxDecoration(
-                        color: recording
-                            ? theme.error
-                            : theme.onSurface.withValues(
-                                alpha: enabled ? 1 : 0.4,
-                              ),
-                        borderRadius: BorderRadius.circular(recording ? 8 : 32),
+                      opacity: _c.isBusy ? 0.4 : 1,
+                      child: StoryIcon(
+                        recording
+                            ? StoryIcons.shutterRecording
+                            : StoryIcons.shutterPhoto,
                       ),
                     ),
                   ),
@@ -258,13 +270,17 @@ class ShutterRingPainter extends CustomPainter {
       oldDelegate.strokeWidth != strokeWidth;
 }
 
-/// The lock target shown left of the shutter while a recording is held.
+/// The lock target shown in place of the gallery thumbnail while a
+/// recording is held.
 class RecordingLockTarget extends StatelessWidget {
   /// Creates the lock target.
   const RecordingLockTarget({required this.onLock, super.key});
 
   /// Locks the recording (tap alternative to dragging).
   final VoidCallback onLock;
+
+  /// Side of the target (the gallery thumbnail's size).
+  static const double size = 60;
 
   @override
   Widget build(BuildContext context) {
@@ -280,17 +296,16 @@ class RecordingLockTarget extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onLock,
         child: SizedBox.square(
-          dimension: 48,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.controlBackground,
-              border: Border.all(color: theme.onSurface, width: 1.5),
-            ),
-            child: Icon(
-              Icons.lock_outline_rounded,
-              size: 22,
-              color: theme.onSurface,
+          dimension: size,
+          child: StorySurface(
+            fill: theme.pillBackground,
+            radius: size / 2,
+            child: Center(
+              child: Icon(
+                Icons.lock_outline_rounded,
+                size: 24,
+                color: theme.onSurface,
+              ),
             ),
           ),
         ),

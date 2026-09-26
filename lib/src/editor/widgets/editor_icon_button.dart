@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/story_scope.dart';
+import '../../ui/story_surface.dart';
 
-/// A round 48×48 icon button on the canvas: translucent by default, filled
-/// with the accent when [filled], accent icon when [selected].
+/// A round 48×48 icon button on the canvas: translucent (a [StorySurface])
+/// by default, filled with the accent when [filled], accent icon and ring
+/// when [selected].
 class EditorIconButton extends StatelessWidget {
   /// Creates the button.
   const EditorIconButton({
@@ -45,6 +47,26 @@ class EditorIconButton extends StatelessWidget {
     final foreground = filled
         ? theme.onAccent
         : (selected ? theme.accent : theme.onSurface);
+    final glyph = Icon(icon, color: foreground, size: 24);
+    final ring = selected && !filled
+        ? Border.all(color: theme.accent, width: 1.5)
+        : null;
+    final face = filled
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: background,
+              shape: BoxShape.circle,
+            ),
+            child: Center(child: glyph),
+          )
+        : StorySurface(
+            fill: background,
+            radius: size / 2,
+            child: DecoratedBox(
+              decoration: BoxDecoration(shape: BoxShape.circle, border: ring),
+              child: Center(child: glyph),
+            ),
+          );
     return Semantics(
       button: true,
       enabled: enabled,
@@ -55,21 +77,10 @@ class EditorIconButton extends StatelessWidget {
       onTap: onPressed,
       child: Opacity(
         opacity: enabled ? 1 : 0.4,
-        child: SizedBox.square(
-          dimension: size,
-          child: Material(
-            color: background,
-            shape: CircleBorder(
-              side: selected && !filled
-                  ? BorderSide(color: theme.accent, width: 1.5)
-                  : BorderSide.none,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onPressed,
-              child: Icon(icon, color: foreground, size: 24),
-            ),
-          ),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onPressed,
+          child: SizedBox.square(dimension: size, child: face),
         ),
       ),
     );
@@ -112,21 +123,17 @@ class EditorTextButton extends StatelessWidget {
       label: label,
       excludeSemantics: true,
       onTap: onPressed,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: EditorIconButton.size,
-          minWidth: EditorIconButton.size,
-        ),
-        child: Material(
-          color: filled ? theme.accent : theme.controlBackground,
-          shape: StadiumBorder(
-            side: selected && !filled
-                ? BorderSide(color: theme.accent, width: 1.5)
-                : BorderSide.none,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: EditorIconButton.size,
+            minWidth: EditorIconButton.size,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onPressed,
+          child: _PillFace(
+            filled: filled,
+            selected: selected,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Center(
@@ -139,6 +146,44 @@ class EditorTextButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PillFace extends StatelessWidget {
+  const _PillFace({
+    required this.filled,
+    required this.selected,
+    required this.child,
+  });
+
+  final bool filled;
+  final bool selected;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = StoryScope.of(context).theme;
+    const radius = EditorIconButton.size / 2;
+    if (filled) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.accent,
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        child: child,
+      );
+    }
+    return StorySurface(
+      fill: theme.controlBackground,
+      radius: radius,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          border: selected ? Border.all(color: theme.accent, width: 1.5) : null,
+        ),
+        child: child,
       ),
     );
   }

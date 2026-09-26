@@ -1,8 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/story_scope.dart';
+import '../../ui/story_surface.dart';
 
-/// A pill with a short message; announced to screen readers.
+/// A translucent pill with a short message; announced to screen readers.
 class NoticeToast extends StatelessWidget {
   /// Creates the toast.
   const NoticeToast({required this.message, super.key});
@@ -16,18 +17,14 @@ class NoticeToast extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       container: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.scrim,
-          borderRadius: BorderRadius.circular(theme.chipRadius),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: theme.bodyStyle,
-          ),
+      child: StorySurface(
+        fill: theme.surface.withValues(alpha: 0.9),
+        radius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: theme.bodyStyle,
         ),
       ),
     );

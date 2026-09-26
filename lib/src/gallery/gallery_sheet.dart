@@ -7,19 +7,19 @@ import '../api/errors/story_exception.dart';
 import '../api/result/story_result.dart';
 import '../camera/widgets/notice_toast.dart';
 import '../camera/widgets/permission_prompt.dart';
-import '../camera/widgets/round_icon_button.dart';
 import '../core/story_scope.dart';
 import '../services/gallery/gallery_source.dart';
+import '../ui/story_icon.dart';
 import 'gallery_keys.dart';
 import 'widgets/album_selector.dart';
 import 'widgets/asset_tile.dart';
 import 'widgets/camera_tile.dart';
 import 'widgets/limited_access_banner.dart';
 
-/// Full-screen gallery over the camera: "Recent ›" album selector, a
-/// 3-column grid with a camera tile first, video duration badges, a
-/// limited-access banner and a permission prompt with a system-picker
-/// fallback. Tapping an item resolves it to a local file and closes the
+/// Full-screen gallery over the camera: back chevron, "Recent ›" album
+/// selector, a 3-column grid of 9:16 tiles with a camera tile first, video
+/// duration badges, a limited-access banner and a permission prompt with a
+/// system-picker fallback. Tapping an item resolves it to a local file and closes the
 /// sheet with it.
 class GallerySheet extends StatefulWidget {
   /// Creates the sheet. Use [open] to show it.
@@ -399,35 +399,35 @@ class _GallerySheetState extends State<GallerySheet>
       key: GalleryKeys.sheet,
       color: theme.background,
       child: SafeArea(
+        bottom: false,
         child: Stack(
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 16, 4),
-                  child: Row(
-                    children: [
-                      RoundIconButton(
-                        key: GalleryKeys.back,
-                        icon: Icons.arrow_back_rounded,
-                        label: strings.common.back,
-                        background: false,
+                // Nav bar: back chevron at x = 16.
+                SizedBox(
+                  height: 48,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: _BackButton(
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: AlbumSelector(
-                          name: album == null
-                              ? strings.camera.recent
-                              : galleryAlbumName(context, album),
-                          open: _albumsOpen,
-                          onPressed: _hasAccess && _albums.length > 1
-                              ? () => setState(() => _albumsOpen = !_albumsOpen)
-                              : null,
-                        ),
-                      ),
-                    ],
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: AlbumSelector(
+                    name: album == null
+                        ? strings.camera.recent
+                        : galleryAlbumName(context, album),
+                    open: _albumsOpen,
+                    onPressed: _hasAccess && _albums.length > 1
+                        ? () => setState(() => _albumsOpen = !_albumsOpen)
+                        : null,
                   ),
                 ),
                 if (_access == GalleryAccess.limited)
@@ -462,12 +462,44 @@ class _GallerySheetState extends State<GallerySheet>
               Positioned(
                 left: 16,
                 right: 16,
-                bottom: 24,
+                bottom: 24 + MediaQuery.paddingOf(context).bottom,
                 child: Center(
                   child: NoticeToast(key: GalleryKeys.notice, message: notice),
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The nav bar's back chevron (24 px icon, 48 px target).
+class _BackButton extends StatelessWidget {
+  const _BackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = StoryScope.of(context);
+    return Semantics(
+      key: GalleryKeys.back,
+      button: true,
+      label: scope.strings.common.back,
+      excludeSemantics: true,
+      onTap: onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: SizedBox.square(
+          dimension: 48,
+          child: Center(
+            child: StoryIcon(
+              StoryIcons.chevronLeft,
+              color: scope.theme.onSurface,
+            ),
+          ),
         ),
       ),
     );
@@ -569,19 +601,21 @@ class _AssetGrid extends StatelessWidget {
     final theme = scope.theme;
     final width = MediaQuery.sizeOf(context).width;
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final thumbSize = (width / 3 * dpr).round().clamp(128, 512);
+    // Tiles are 9:16, so the thumbnail must cover the tile's height.
+    final thumbSize = (width / 3 * dpr * 16 / 9).round().clamp(128, 720);
+    final bottom = MediaQuery.paddingOf(context).bottom;
     return Stack(
       children: [
         GridView.builder(
           key: GalleryKeys.grid,
           controller: scroll,
-          padding: EdgeInsets.zero,
+          padding: EdgeInsets.fromLTRB(4, 0, 4, bottom),
           scrollCacheExtent: const ScrollCacheExtent.pixels(400),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             mainAxisSpacing: 2,
             crossAxisSpacing: 2,
-            childAspectRatio: 3 / 4,
+            childAspectRatio: 1080 / 1920,
           ),
           itemCount: assets.length + 1,
           itemBuilder: (context, index) {
@@ -613,22 +647,12 @@ class _AssetGrid extends StatelessWidget {
   }
 }
 
+/// Blank while the photo permission is read (a moment); no spinner.
 class _Loading extends StatelessWidget {
   const _Loading();
 
   @override
-  Widget build(BuildContext context) {
-    final theme = StoryScope.of(context).theme;
-    return Center(
-      child: SizedBox.square(
-        dimension: 28,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.5,
-          color: theme.onSurfaceMuted,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.expand();
 }
 
 class _LoadFailed extends StatelessWidget {

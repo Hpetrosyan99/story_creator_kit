@@ -2,7 +2,7 @@ name: story_creator_kit
 description: >-
   Instagram-style story creator for Flutter: camera, gallery, text, drawing,
   stickers, filters, music and native photo/video export on iOS and Android.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/Hpetrosyan99/story_creator_kit
 repository: https://github.com/Hpetrosyan99/story_creator_kit
 issue_tracker: https://github.com/Hpetrosyan99/story_creator_kit/issues
@@ -33,6 +33,7 @@ dependencies:
   photo_manager: ^3.12.0
   photo_manager_image_provider: ^2.2.0
   video_player: ^2.14.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -44,6 +45,8 @@ dev_dependencies:
   video_player_platform_interface: ^6.4.0
 
 flutter:
+  assets:
+    - assets/icons/
   plugin:
     platforms:
       android:

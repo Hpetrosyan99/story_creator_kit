@@ -8,8 +8,14 @@ import '../core/media_import.dart';
 import '../core/story_scope.dart';
 import '../gallery/gallery_sheet.dart';
 import '../model/story_media.dart';
+import '../ui/story_icon.dart';
+import '../ui/story_nav_button.dart';
+import '../ui/story_pill_toggle.dart';
+import '../ui/story_stage.dart';
 import 'camera_controller.dart';
 import 'camera_keys.dart';
+import 'text_story_background.dart';
+import 'widgets/camera_cta_column.dart';
 import 'widgets/camera_switch_button.dart';
 import 'widgets/camera_unavailable_view.dart';
 import 'widgets/flash_toggle.dart';
@@ -18,7 +24,6 @@ import 'widgets/gallery_shortcut.dart';
 import 'widgets/notice_toast.dart';
 import 'widgets/permission_prompt.dart';
 import 'widgets/recording_indicator.dart';
-import 'widgets/round_icon_button.dart';
 import 'widgets/shutter_button.dart';
 import 'widgets/zoom_indicator.dart';
 
@@ -26,7 +31,10 @@ import 'widgets/zoom_indicator.dart';
 /// it is white regardless of the theme.
 const Color kScreenFlashColor = Color(0xFFFFFFFF);
 
-/// Camera with gallery access. Reports imported media or closing.
+/// Camera with gallery access, laid out on the shared [StoryStage]: the
+/// live preview in the rounded card, close and "Video | Photo" on top, the
+/// flash and text buttons on the left, gallery, shutter and lens switch at
+/// the bottom. Reports imported media or closing.
 class CameraScreen extends StatefulWidget {
   /// Creates the camera screen.
   const CameraScreen({
@@ -96,86 +104,65 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
+  Future<void> _createTextStory() async {
+    final controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    final scope = StoryScope.read(context);
+    final (top, bottom) = textStoryColors(scope.config.editor, scope.theme);
+    await controller.createTextStory(top: top, bottom: bottom);
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = _controller!;
-    final galleryEnabled =
-        StoryScope.of(context).config.capture.galleryMode !=
-        GalleryMode.disabled;
+    final config = StoryScope.of(context).config;
+    final galleryEnabled = config.capture.galleryMode != GalleryMode.disabled;
+    final textEnabled =
+        config.editor.enableText && config.constraints.allowPhotos;
     return ListenableBuilder(
       listenable: controller,
-      builder: (context, _) => _CameraLayout(
-        controller: controller,
-        onClose: widget.onClose,
-        onOpenGallery: galleryEnabled ? _openGallery : null,
+      builder: (context, _) => Stack(
+        fit: StackFit.expand,
+        children: [
+          StoryStage(
+            card: _CameraCard(
+              controller: controller,
+              onClose: widget.onClose,
+              onOpenGallery: galleryEnabled ? _openGallery : null,
+              onTextStory: textEnabled ? _createTextStory : null,
+            ),
+          ),
+          if (controller.screenFlashVisible)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: ColoredBox(
+                  key: CameraKeys.screenFlash,
+                  color: kScreenFlashColor,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _CameraLayout extends StatelessWidget {
-  const _CameraLayout({
-    required this.controller,
-    required this.onClose,
-    required this.onOpenGallery,
-  });
-
-  final StoryCameraController controller;
-  final VoidCallback onClose;
-  final VoidCallback? onOpenGallery;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = StoryScope.of(context).theme;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ColoredBox(color: theme.background),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 9 / 16,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(theme.cornerRadius * 1.5),
-                  child: ColoredBox(
-                    color: theme.surface,
-                    child: _CameraCard(
-                      controller: controller,
-                      onClose: onClose,
-                      onOpenGallery: onOpenGallery,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (controller.screenFlashVisible)
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: ColoredBox(
-                key: CameraKeys.screenFlash,
-                color: kScreenFlashColor,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
+/// Everything inside the rounded camera card: preview (or a state view),
+/// the nav row, the CTA column and the bottom row.
 class _CameraCard extends StatelessWidget {
   const _CameraCard({
     required this.controller,
     required this.onClose,
     required this.onOpenGallery,
+    required this.onTextStory,
   });
 
   final StoryCameraController controller;
   final VoidCallback onClose;
   final VoidCallback? onOpenGallery;
+  final VoidCallback? onTextStory;
 
   @override
   Widget build(BuildContext context) {
@@ -184,46 +171,58 @@ class _CameraCard extends StatelessWidget {
     final strings = scope.strings;
     final c = controller;
     final recording = c.isRecording;
+    final cameraShown = switch (c.status) {
+      CameraStatus.ready ||
+      CameraStatus.starting ||
+      CameraStatus.paused ||
+      CameraStatus.checkingPermission => true,
+      CameraStatus.permissionRequired ||
+      CameraStatus.permissionBlocked ||
+      CameraStatus.unavailable => false,
+    };
+    final textStory = onTextStory;
     return Stack(
       fit: StackFit.expand,
       children: [
-        Positioned.fill(child: _CameraBody(controller: c)),
-        Positioned(
-          top: 8,
-          left: 8,
-          right: 8,
-          child: Row(
-            children: [
-              if (recording)
-                const SizedBox.square(dimension: 48)
-              else
-                RoundIconButton(
-                  key: CameraKeys.close,
-                  icon: Icons.close_rounded,
-                  label: strings.common.close,
-                  onPressed: onClose,
-                ),
-              Expanded(
-                child: Center(
-                  child: recording
-                      ? RecordingIndicator(elapsed: c.elapsed)
-                      : const SizedBox.shrink(),
-                ),
-              ),
-              if (c.flashAvailable)
-                FlashToggle(
-                  mode: c.flashMode,
-                  onPressed: c.isReady || recording ? c.toggleFlash : null,
-                )
-              else
-                const SizedBox.square(dimension: 48),
-            ],
+        Positioned.fill(
+          child: ColoredBox(
+            color: theme.surface,
+            child: _CameraBody(controller: c),
           ),
         ),
+        // Nav row: 16 / 12 padding around the 44 px button (48 px target).
+        if (!recording)
+          Positioned(
+            key: const ValueKey('close'),
+            top: 10,
+            left: 14,
+            child: StoryNavButton(
+              key: CameraKeys.close,
+              icon: StoryIcons.close,
+              label: strings.common.close,
+              onPressed: onClose,
+            ),
+          ),
+        if (cameraShown && c.captureModeSelectable && !recording)
+          Positioned(
+            key: const ValueKey('mode'),
+            top: 10,
+            right: 16,
+            child: _CaptureModeToggle(controller: c),
+          ),
+        if (recording)
+          Positioned(
+            key: const ValueKey('timer'),
+            top: 17,
+            left: 64,
+            right: 64,
+            child: Center(child: RecordingIndicator(elapsed: c.elapsed)),
+          ),
         Positioned(
-          top: 68,
-          left: 16,
-          right: 16,
+          key: const ValueKey('notice'),
+          top: 72,
+          left: 56,
+          right: 56,
           child: Center(
             child: ValueListenableBuilder<CameraNotice?>(
               valueListenable: c.notice,
@@ -236,30 +235,59 @@ class _CameraCard extends StatelessWidget {
             ),
           ),
         ),
+        // CTA column: icons at x = 16, vertically centred.
         Positioned(
+          key: const ValueKey('cta'),
+          left: 2,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: CameraCtaColumn(
+              children: [
+                if (cameraShown && c.flashAvailable)
+                  FlashToggle(
+                    mode: c.flashMode,
+                    onPressed: c.isReady || recording ? c.toggleFlash : null,
+                  ),
+                if (textStory != null && !recording)
+                  CameraCtaButton(
+                    key: CameraKeys.textStory,
+                    icon: StoryIcons.text,
+                    label: strings.camera.textStory,
+                    onPressed: c.isBusy ? null : textStory,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          key: const ValueKey('feedback'),
           left: 0,
           right: 0,
-          bottom: 12,
-          child: _BottomControls(controller: c, onOpenGallery: onOpenGallery),
+          bottom: 16 + _BottomRow.rowHeight + 12,
+          child: _CaptureFeedback(controller: c),
+        ),
+        Positioned(
+          key: const ValueKey('bottom'),
+          left: 14,
+          right: 14,
+          bottom: 16 - (_BottomRow.height - _BottomRow.rowHeight) / 2,
+          height: _BottomRow.height,
+          child: _BottomRow(
+            controller: c,
+            showShutter: cameraShown && (c.photoEnabled || c.videoEnabled),
+            onOpenGallery: onOpenGallery,
+          ),
         ),
         if (c.isBusy)
           Positioned.fill(
-            child: ColoredBox(
-              key: CameraKeys.busy,
-              color: theme.scrim,
-              child: Center(
-                child: Semantics(
-                  label: strings.camera.importing,
-                  liveRegion: true,
-                  excludeSemantics: true,
-                  child: SizedBox.square(
-                    dimension: 32,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      color: theme.accent,
-                    ),
-                  ),
-                ),
+            child: AbsorbPointer(
+              child: Semantics(
+                key: CameraKeys.busy,
+                label: strings.camera.importing,
+                liveRegion: true,
+                container: true,
+                child: const SizedBox.expand(),
               ),
             ),
           ),
@@ -283,6 +311,149 @@ class _CameraCard extends StatelessWidget {
   }
 }
 
+/// The "Video | Photo" toggle. The pill's own options are small, so the
+/// whole 48 px high area is one control: tapping an option selects it,
+/// tapping elsewhere (or activating it with a screen reader) switches to
+/// the other mode.
+class _CaptureModeToggle extends StatelessWidget {
+  const _CaptureModeToggle({required this.controller});
+
+  final StoryCameraController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = StoryScope.of(context).strings.camera;
+    final c = controller;
+    final mode = c.captureMode;
+    final other = mode == CameraCaptureMode.photo
+        ? CameraCaptureMode.video
+        : CameraCaptureMode.photo;
+    void toggle() => c.setCaptureMode(other);
+    return Semantics(
+      key: CameraKeys.captureMode,
+      button: true,
+      label: strings.captureMode,
+      value: mode == CameraCaptureMode.photo
+          ? strings.photoMode
+          : strings.videoMode,
+      excludeSemantics: true,
+      onTap: toggle,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: toggle,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+          child: Center(
+            widthFactor: 1,
+            child: StoryPillToggle<CameraCaptureMode>(
+              options: [
+                (CameraCaptureMode.video, strings.videoMode),
+                (CameraCaptureMode.photo, strings.photoMode),
+              ],
+              selected: mode,
+              onChanged: c.setCaptureMode,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Zoom factor and the hands-free recording hint, above the shutter.
+class _CaptureFeedback extends StatelessWidget {
+  const _CaptureFeedback({required this.controller});
+
+  final StoryCameraController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = StoryScope.of(context);
+    final theme = scope.theme;
+    final c = controller;
+    final caps = c.capabilities;
+    final showZoom =
+        caps != null &&
+        c.status == CameraStatus.ready &&
+        c.zoom > caps.minZoom + 0.05;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showZoom)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: ZoomIndicator(zoom: c.zoom),
+          ),
+        if (c.isLocked)
+          Text(
+            scope.strings.camera.recordingLockedHint,
+            textAlign: TextAlign.center,
+            style: theme.bodyStyle.copyWith(
+              shadows: [
+                Shadow(
+                  color: theme.scrim,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Gallery thumbnail (or the lock target while holding), shutter and lens
+/// switch. [height] leaves room for the shutter's larger tap target; the
+/// visual row is [rowHeight] high.
+class _BottomRow extends StatelessWidget {
+  const _BottomRow({
+    required this.controller,
+    required this.showShutter,
+    required this.onOpenGallery,
+  });
+
+  final StoryCameraController controller;
+  final bool showShutter;
+  final VoidCallback? onOpenGallery;
+
+  static const double rowHeight = 60;
+  static const double height = ShutterButton.hitSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final recording = c.isRecording;
+    final Widget? left;
+    if (recording && !c.isLocked) {
+      left = RecordingLockTarget(onLock: c.lockRecording);
+    } else if (!recording && onOpenGallery != null) {
+      left = GalleryShortcut(onPressed: c.isBusy ? null : onOpenGallery);
+    } else {
+      left = null;
+    }
+    final showSwitch = !recording && c.lensSwitchAvailable;
+    return Stack(
+      children: [
+        if (left != null)
+          Positioned(left: 2, top: 0, bottom: 0, child: Center(child: left)),
+        if (showShutter) Center(child: ShutterButton(controller: c)),
+        if (showSwitch)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: CameraSwitchButton(
+                onPressed: c.isReady ? c.switchLens : null,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _CameraBody extends StatelessWidget {
   const _CameraBody({required this.controller});
 
@@ -293,8 +464,8 @@ class _CameraBody extends StatelessWidget {
     final scope = StoryScope.of(context);
     final strings = scope.strings;
     final c = controller;
-    // Leaves room for the top bar and the shutter row.
-    const padding = EdgeInsets.fromLTRB(16, 64, 16, 150);
+    // Leaves room for the nav row, the CTA column and the bottom row.
+    const padding = EdgeInsets.fromLTRB(48, 64, 48, 96);
     switch (c.status) {
       case CameraStatus.permissionRequired:
         return Padding(
@@ -353,7 +524,9 @@ class _LivePreviewState extends State<_LivePreview> {
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
-    final label = StoryScope.of(context).strings.camera.cameraPreview;
+    final scope = StoryScope.of(context);
+    final scrim = scope.theme.scrim;
+    final label = scope.strings.camera.cameraPreview;
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
@@ -383,6 +556,17 @@ class _LivePreviewState extends State<_LivePreview> {
                 excludeSemantics: true,
                 child: c.capture.buildPreview(),
               ),
+              // Design scrim: transparent on the left to 40 % black on the
+              // right.
+              IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [scrim.withValues(alpha: 0), scrim],
+                    ),
+                  ),
+                ),
+              ),
               if (focus != null)
                 Positioned(
                   left: focus.dx * size.width - FocusMarker.size / 2,
@@ -393,91 +577,6 @@ class _LivePreviewState extends State<_LivePreview> {
           ),
         );
       },
-    );
-  }
-}
-
-class _BottomControls extends StatelessWidget {
-  const _BottomControls({
-    required this.controller,
-    required this.onOpenGallery,
-  });
-
-  final StoryCameraController controller;
-  final VoidCallback? onOpenGallery;
-
-  @override
-  Widget build(BuildContext context) {
-    final scope = StoryScope.of(context);
-    final theme = scope.theme;
-    final strings = scope.strings.camera;
-    final c = controller;
-    final recording = c.isRecording;
-    final caps = c.capabilities;
-    final showShutter =
-        (c.photoEnabled || c.videoEnabled) &&
-        switch (c.status) {
-          CameraStatus.ready ||
-          CameraStatus.starting ||
-          CameraStatus.paused ||
-          CameraStatus.checkingPermission => true,
-          CameraStatus.permissionRequired ||
-          CameraStatus.permissionBlocked ||
-          CameraStatus.unavailable => false,
-        };
-    final String? hint;
-    if (c.isLocked) {
-      hint = strings.recordingLockedHint;
-    } else if (!recording &&
-        c.status == CameraStatus.ready &&
-        c.photoEnabled &&
-        c.videoEnabled) {
-      hint = strings.shutterHint;
-    } else {
-      hint = null;
-    }
-    final Widget left;
-    if (recording && !c.isLocked) {
-      left = RecordingLockTarget(onLock: c.lockRecording);
-    } else if (!recording && onOpenGallery != null) {
-      left = GalleryShortcut(onPressed: c.isBusy ? null : onOpenGallery);
-    } else {
-      left = const SizedBox.square(dimension: 48);
-    }
-    final right = !recording && c.lensSwitchAvailable
-        ? CameraSwitchButton(onPressed: c.isReady ? c.switchLens : null)
-        : const SizedBox.square(dimension: 48);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (caps != null &&
-            c.status == CameraStatus.ready &&
-            c.zoom > caps.minZoom + 0.05)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: ZoomIndicator(zoom: c.zoom),
-          ),
-        if (hint != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              hint,
-              textAlign: TextAlign.center,
-              style: theme.captionStyle.copyWith(color: theme.onSurface),
-            ),
-          ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            SizedBox(width: 64, child: Center(child: left)),
-            if (showShutter)
-              ShutterButton(controller: c)
-            else
-              const SizedBox.square(dimension: 100),
-            SizedBox(width: 64, child: Center(child: right)),
-          ],
-        ),
-      ],
     );
   }
 }

@@ -261,6 +261,87 @@ void main() {
     expect(notified, 1);
   });
 
+  group('replaceMedia', () {
+    const longVideo = StoryMedia(
+      path: '/tmp/long.mp4',
+      type: StoryMediaType.video,
+      width: 1920,
+      height: 1080,
+      source: StorySourceKind.gallery,
+      duration: Duration(seconds: 90),
+      hasAudio: true,
+    );
+
+    test('keeps overlays, drawing and filter; one undo step', () {
+      final c = _controller(music: _music)
+        ..commitText(text: 'Hi', style: _style)
+        ..addSticker('star')
+        ..addStroke(_stroke)
+        ..setFilter(StoryFilter.defaults[1])
+        ..setPlacement(const MediaPlacement(scale: 2, offset: Offset(10, 0)))
+        ..applyBackground(const StoryBackground(top: Color(0xFF112233)));
+      final before = c.document;
+      c.replaceMedia(
+        longVideo,
+        maxDuration: const Duration(seconds: 60),
+        photoDuration: const Duration(seconds: 15),
+      );
+      final after = c.document;
+      expect(after.media, longVideo);
+      expect(after.overlays, before.overlays);
+      expect(after.strokes, before.strokes);
+      expect(after.filterId, before.filterId);
+      expect(after.placement, StoryCanvas.defaultPlacement(longVideo));
+      expect(after.background, const StoryBackground());
+      expect(after.trim, TrimRange(Duration.zero, const Duration(seconds: 60)));
+      expect(after.music!.track, _music.track);
+      expect(after.music!.start, _music.start);
+      expect(after.music!.duration, const Duration(seconds: 60));
+      expect(c.isDirty, isTrue);
+
+      c.undo();
+      expect(c.document, before);
+      c.redo();
+      expect(c.document, after);
+    });
+
+    test('a photo clears the trim and gets the photo music length', () {
+      final c =
+          EditorController(
+            initialDocument: StoryDocument(
+              media: _video,
+              trim: TrimRange(
+                const Duration(seconds: 2),
+                const Duration(seconds: 12),
+              ),
+              music: _music,
+            ),
+            options: const EditorOptions(),
+          )..replaceMedia(
+            _photo,
+            maxDuration: const Duration(seconds: 60),
+            photoDuration: const Duration(seconds: 15),
+          );
+      expect(c.document.trim, isNull);
+      expect(c.document.music!.duration, const Duration(seconds: 15));
+    });
+
+    test('the new background does not leak into the starting document', () {
+      final c = _controller()
+        ..replaceMedia(
+          _video,
+          maxDuration: const Duration(seconds: 60),
+          photoDuration: const Duration(seconds: 15),
+        )
+        ..applyBackground(const StoryBackground(top: Color(0xFF445566)));
+      expect(c.document.background.top, const Color(0xFF445566));
+      c.undo();
+      expect(c.isDirty, isFalse);
+      c.redo();
+      expect(c.document.background.top, const Color(0xFF445566));
+    });
+  });
+
   test('tool and selection changes do not touch history', () {
     final c = _controller()
       ..setTool(EditorTool.draw)

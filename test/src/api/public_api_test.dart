@@ -69,7 +69,8 @@ void main() {
       expect(config.output.frameRate, 30);
       expect(config.editor.fonts, [StoryFont.system]);
       expect(config.editor.filters, StoryFilter.defaults);
-      expect(config.theme.accent, const Color(0xFFE4572E));
+      expect(config.theme.accent, const Color(0xFFCF5835));
+      expect(config.theme.isLiquidGlassEnabled, isFalse);
     });
   });
 

@@ -75,7 +75,10 @@ class CanvasGestureLayer extends StatefulWidget {
 class _GestureSession {
   _GestureSession(this.targetId);
 
-  final String? targetId;
+  /// The overlay being moved, or `null` for the media (pinch) / filter
+  /// swipe. May be set once when a second finger joins (see
+  /// `_retarget`).
+  String? targetId;
   int maxPointers = 0;
   Offset startFocal = Offset.zero;
   OverlayTransform? startTransform;
@@ -111,6 +114,40 @@ class _CanvasGestureLayerState extends State<CanvasGestureLayer> {
     widget.onTap(hit);
   }
 
+  /// The topmost overlay under any of [points] (screen pixels), in order.
+  StoryOverlay? _hitAny(Iterable<Offset> points) {
+    for (final point in points) {
+      final hit = OverlayGeometry.hitTest(
+        _controller.document.overlays,
+        point / _s,
+        widget.resources,
+        minExtent: CanvasGestureLayer.minTouchExtent / _s,
+      );
+      if (hit != null) {
+        return hit;
+      }
+    }
+    return null;
+  }
+
+  /// Where to look for the overlay a multi-finger gesture is about: every
+  /// finger and the point between them. The first finger alone often lands
+  /// just outside a short text (or, in the iOS Simulator, the second finger
+  /// is mirrored around the screen centre), which used to send the pinch
+  /// to the media, which zooms but does not rotate.
+  List<Offset> _multiTouchCandidates(ScaleStartDetails details) => [
+    ..._downs.values,
+    details.localFocalPoint,
+  ];
+
+  void _grab(_GestureSession session, StoryOverlay hit) {
+    session.targetId = hit.id;
+    _controller
+      ..bringToFront(hit.id)
+      ..select(hit.id);
+    widget.interaction.startDrag(hit.id);
+  }
+
   void _onScaleStart(ScaleStartDetails details) {
     var focal = details.localFocalPoint / _s;
     var session = _session;
@@ -120,21 +157,25 @@ class _CanvasGestureLayerState extends State<CanvasGestureLayer> {
       if (details.pointerCount == 1 && firstDown != null) {
         focal = grab;
       }
-      final hit = OverlayGeometry.hitTest(
-        _controller.document.overlays,
-        grab,
-        widget.resources,
-        minExtent: CanvasGestureLayer.minTouchExtent / _s,
-      );
-      session = _session = _GestureSession(hit?.id)
+      final hit = _hitAny([
+        firstDown ?? details.localFocalPoint,
+        if (details.pointerCount >= 2) ..._multiTouchCandidates(details),
+      ]);
+      session = _session = _GestureSession(null)
         ..swipeOrigin = firstDown ?? details.localFocalPoint
         ..swipeLast = details.localFocalPoint;
       _controller.beginGesture();
       if (hit != null) {
-        _controller
-          ..bringToFront(hit.id)
-          ..select(hit.id);
-        widget.interaction.startDrag(hit.id);
+        _grab(session, hit);
+      }
+    } else if (session.targetId == null &&
+        details.pointerCount >= 2 &&
+        session.maxPointers < 2) {
+      // A second finger joined a media pinch / swipe: if the fingers are
+      // over an overlay, the gesture is about that overlay.
+      final hit = _hitAny(_multiTouchCandidates(details));
+      if (hit != null) {
+        _grab(session, hit);
       }
     }
     session

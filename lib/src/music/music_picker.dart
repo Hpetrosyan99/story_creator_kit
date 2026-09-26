@@ -19,15 +19,23 @@ import 'segment_selector.dart';
 /// (with `localPath` resolved, ready for export), the unchanged [current]
 /// when the user backs out, or `null` when the user removes the music.
 ///
-/// The picker is a full-screen list; tapping a row previews the track and the
-/// row's "use" button picks it. The segment selector then opens as a bottom
-/// panel over the story. Returns [current] at once when the configuration has
-/// no music provider.
+/// The picker is a full-screen list; tapping a row picks the track (a long
+/// press previews it). The segment selector then opens on a stage like the
+/// editor's, showing [canvas] (the story, dimmed) in its card; without
+/// [canvas] the card is plain. Returns [current] at once when the
+/// configuration has no music provider.
+
 Future<MusicSelection?> showMusicPicker(
   BuildContext context, {
   required Duration segmentLength,
   MusicSelection? current,
-}) => openMusicPicker(context, segmentLength: segmentLength, current: current);
+  WidgetBuilder? canvas,
+}) => openMusicPicker(
+  context,
+  segmentLength: segmentLength,
+  current: current,
+  canvas: canvas,
+);
 
 /// [showMusicPicker] with replaceable internals, for tests.
 ///
@@ -37,6 +45,7 @@ Future<MusicSelection?> openMusicPicker(
   BuildContext context, {
   required Duration segmentLength,
   MusicSelection? current,
+  WidgetBuilder? canvas,
   MusicFileCache? cache,
   Duration searchDebounce = kMusicSearchDebounce,
 }) async {
@@ -104,6 +113,7 @@ Future<MusicSelection?> openMusicPicker(
                     ? current.start
                     : Duration.zero,
                 volume: current?.volume ?? 1,
+                canvas: canvas,
               ),
             ),
           );
@@ -141,18 +151,11 @@ Route<MusicSelection> _segmentRoute({
   required ThemeData materialTheme,
   required Widget child,
 }) => PageRouteBuilder<MusicSelection>(
-  opaque: false,
   pageBuilder: (context, _, _) =>
       MusicRouteShell(scope: scope, materialTheme: materialTheme, child: child),
   transitionsBuilder: (context, animation, _, child) => FadeTransition(
     opacity: CurveTween(curve: Curves.easeOut).animate(animation),
-    child: SlideTransition(
-      position: Tween(
-        begin: const Offset(0, 0.15),
-        end: Offset.zero,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(animation),
-      child: child,
-    ),
+    child: child,
   ),
 );
 

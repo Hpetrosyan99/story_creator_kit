@@ -7,12 +7,14 @@ import '../api/errors/story_exception.dart';
 import '../api/music/music_models.dart';
 import '../core/story_scope.dart';
 import '../model/music_selection.dart';
+import '../ui/story_icon.dart';
 import 'music_file_cache.dart';
 import 'music_picker_controller.dart';
 import 'music_preview_controller.dart';
 import 'music_track_preparer.dart';
 import 'widgets/category_chips.dart';
 import 'widgets/music_list_message.dart';
+import 'widgets/music_list_skeleton.dart';
 import 'widgets/music_search_field.dart';
 import 'widgets/track_tile.dart';
 
@@ -36,7 +38,11 @@ final class MusicPickerChose extends MusicPickerOutcome {
   final PreparedMusicTrack prepared;
 }
 
-/// Full-screen music list: search, category chips and the paged track list.
+/// Full-screen music list: back chevron, search, category chips and the
+/// paged track list.
+///
+/// Tapping a row prepares the track (download, waveform) and pops with it so
+/// the segment selector opens; a long press previews it.
 ///
 /// Pops with `null` on back, [MusicPickerRemoved] or [MusicPickerChose].
 /// Leaving while a track is being prepared cancels its download.
@@ -217,11 +223,15 @@ class _MusicPickerScreenState extends State<MusicPickerScreen> {
       );
   }
 
+  void _resetFilters() {
+    _search.clear();
+    widget.controller.resetFilters();
+  }
+
   @override
   Widget build(BuildContext context) {
     final scope = StoryScope.of(context);
     final theme = scope.theme;
-    final strings = scope.strings;
     final controller = widget.controller;
     final preparing = _preparing;
     return PopScope(
@@ -233,34 +243,21 @@ class _MusicPickerScreenState extends State<MusicPickerScreen> {
       child: Scaffold(
         backgroundColor: theme.background,
         body: SafeArea(
+          bottom: false,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _NavBar(
+                onBack: _back,
+                onRemove: widget.current != null ? _remove : null,
+              ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: strings.common.back,
-                      onPressed: _back,
-                      icon: Icon(Icons.arrow_back, color: theme.onSurface),
-                    ),
-                    Expanded(
-                      child: MusicSearchField(
-                        controller: _search,
-                        onChanged: controller.setSearch,
-                        onSubmitted: controller.searchNow,
-                        onCleared: () => controller.searchNow(''),
-                      ),
-                    ),
-                    if (widget.current != null)
-                      IconButton(
-                        tooltip: strings.music.removeMusic,
-                        onPressed: _remove,
-                        icon: Icon(Icons.music_off, color: theme.onSurface),
-                      )
-                    else
-                      const SizedBox(width: 12),
-                  ],
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                child: MusicSearchField(
+                  controller: _search,
+                  onChanged: controller.setSearch,
+                  onSubmitted: controller.searchNow,
+                  onCleared: () => controller.searchNow(''),
                 ),
               ),
               ListenableBuilder(
@@ -269,10 +266,10 @@ class _MusicPickerScreenState extends State<MusicPickerScreen> {
                   categories: controller.categories,
                   selected: controller.category,
                   onSelected: controller.selectCategory,
-                  onCleared: controller.clearCategory,
+                  onCleared: _resetFilters,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 20),
               Expanded(
                 child: ListenableBuilder(
                   listenable: Listenable.merge([controller, widget.preview]),
@@ -281,6 +278,7 @@ class _MusicPickerScreenState extends State<MusicPickerScreen> {
                     preview: widget.preview,
                     scroll: _scroll,
                     preparingId: preparing?.id,
+                    selectedId: widget.current?.track.id,
                     progress: _progress,
                     onScroll: _maybeLoadMore,
                     onPreview: _togglePreview,
@@ -288,10 +286,82 @@ class _MusicPickerScreenState extends State<MusicPickerScreen> {
                   ),
                 ),
               ),
-              if (preparing != null) _PreparingBanner(progress: _progress),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Back chevron at the left; "Remove music" at the right when the story has
+/// music. 48 px high, no title.
+class _NavBar extends StatelessWidget {
+  const _NavBar({required this.onBack, required this.onRemove});
+
+  final VoidCallback onBack;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = StoryScope.of(context);
+    final theme = scope.theme;
+    final strings = scope.strings;
+    final onRemove = this.onRemove;
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          const SizedBox(width: 4),
+          Semantics(
+            button: true,
+            label: strings.common.back,
+            excludeSemantics: true,
+            onTap: onBack,
+            child: GestureDetector(
+              key: const ValueKey('music-back'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onBack,
+              child: SizedBox.square(
+                dimension: 48,
+                child: Center(
+                  child: StoryIcon(
+                    StoryIcons.chevronLeft,
+                    color: theme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Spacer(),
+          if (onRemove != null)
+            Semantics(
+              button: true,
+              label: strings.music.removeMusic,
+              excludeSemantics: true,
+              onTap: onRemove,
+              child: GestureDetector(
+                key: const ValueKey('music-remove'),
+                behavior: HitTestBehavior.opaque,
+                onTap: onRemove,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Center(
+                      widthFactor: 1,
+                      child: Text(
+                        strings.music.removeMusic,
+                        style: theme.labelStyle.copyWith(
+                          color: theme.onSurfaceSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -303,6 +373,7 @@ class _TrackListBody extends StatelessWidget {
     required this.preview,
     required this.scroll,
     required this.preparingId,
+    required this.selectedId,
     required this.progress,
     required this.onScroll,
     required this.onPreview,
@@ -313,6 +384,7 @@ class _TrackListBody extends StatelessWidget {
   final MusicPreviewController preview;
   final ScrollController scroll;
   final String? preparingId;
+  final String? selectedId;
   final ValueListenable<double?> progress;
   final VoidCallback onScroll;
   final ValueChanged<MusicTrack> onPreview;
@@ -321,26 +393,20 @@ class _TrackListBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = StoryScope.of(context);
-    final theme = scope.theme;
     final strings = scope.strings.music;
     switch (controller.status) {
       case MusicListStatus.loading:
-        return Center(child: CircularProgressIndicator(color: theme.accent));
+        return const MusicListSkeleton();
       case MusicListStatus.empty:
-        return MusicListMessage(
-          message: strings.noResults,
-          icon: Icons.search_off,
-        );
+        return MusicListMessage(message: strings.noResults);
       case MusicListStatus.error:
         return MusicListMessage(
           message: strings.loadFailed,
-          icon: Icons.error_outline,
           onRetry: controller.retry,
         );
       case MusicListStatus.offline:
         return MusicListMessage(
           message: strings.offline,
-          icon: Icons.wifi_off,
           onRetry: controller.retry,
         );
       case MusicListStatus.ready:
@@ -349,7 +415,11 @@ class _TrackListBody extends StatelessWidget {
     final tracks = controller.tracks;
     final showFooter = controller.hasMore || controller.loadMoreFailed;
     final showBookmark = controller.provider.supportsBookmarks;
+    final ranked = controller.category.showRanks;
     final busy = preparingId != null;
+    // One highlighted row: the one previewing, else the one being prepared,
+    // else the story's current track.
+    final highlightedId = preview.playingId ?? preparingId ?? selectedId;
     return NotificationListener<ScrollNotification>(
       onNotification: (_) {
         onScroll();
@@ -358,7 +428,9 @@ class _TrackListBody extends StatelessWidget {
       child: ListView.builder(
         key: const ValueKey('music-track-list'),
         controller: scroll,
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: EdgeInsets.only(
+          bottom: 16 + MediaQuery.paddingOf(context).bottom,
+        ),
         itemCount: tracks.length + (showFooter ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == tracks.length) {
@@ -368,13 +440,16 @@ class _TrackListBody extends StatelessWidget {
           return TrackTile(
             key: ValueKey('music-track-${track.id}'),
             track: track,
+            rank: ranked ? index + 1 : null,
             bookmarked: controller.isBookmarked(track),
             showBookmark: showBookmark,
+            highlighted: track.id == highlightedId,
+            playing: preview.isPlaying(track),
             previewing: preview.isPlaying(track),
             progress: preparingId == track.id ? progress : null,
-            onPreview: () => onPreview(track),
+            onSelect: busy ? null : () => onUse(track),
+            onPreview: busy ? null : () => onPreview(track),
             onBookmark: () => unawaited(controller.toggleBookmark(track)),
-            onUse: busy ? null : () => onUse(track),
           );
         },
       ),
@@ -389,70 +464,17 @@ class _ListFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scope = StoryScope.of(context);
-    final theme = scope.theme;
+    final theme = StoryScope.of(context).theme;
     if (controller.loadMoreFailed) {
-      return Center(
-        child: TextButton(
-          onPressed: controller.retryLoadMore,
-          style: TextButton.styleFrom(minimumSize: const Size(88, 48)),
-          child: Text(
-            scope.strings.common.retry,
-            style: theme.labelStyle.copyWith(color: theme.accent),
-          ),
-        ),
-      );
+      return Center(child: MusicRetryPill(onPressed: controller.retryLoadMore));
     }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Center(
         child: SizedBox.square(
-          dimension: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: theme.accent,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PreparingBanner extends StatelessWidget {
-  const _PreparingBanner({required this.progress});
-
-  final ValueListenable<double?> progress;
-
-  @override
-  Widget build(BuildContext context) {
-    final scope = StoryScope.of(context);
-    final theme = scope.theme;
-    return ColoredBox(
-      color: theme.surface,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Semantics(
-          liveRegion: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(scope.strings.music.downloading, style: theme.captionStyle),
-              const SizedBox(height: 8),
-              ValueListenableBuilder<double?>(
-                valueListenable: progress,
-                builder: (context, value, _) => ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: value,
-                    minHeight: 4,
-                    color: theme.accent,
-                    backgroundColor: theme.outline,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          key: const ValueKey('music-load-more'),
+          dimension: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: theme.accent),
         ),
       ),
     );

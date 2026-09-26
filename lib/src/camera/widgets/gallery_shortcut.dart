@@ -7,7 +7,8 @@ import '../../core/story_scope.dart';
 import '../../services/gallery/gallery_source.dart';
 import '../camera_keys.dart';
 
-/// Rounded thumbnail of the newest gallery item that opens the gallery.
+/// Rounded thumbnail (60 px, radius 16, 1 px white border) of the newest
+/// gallery item that opens the gallery.
 ///
 /// Shows a generic icon when there is no grid (system picker), no access
 /// yet (it never prompts) or the library is empty. Refreshes on library
@@ -18,6 +19,9 @@ class GalleryShortcut extends StatefulWidget {
 
   /// Opens the gallery.
   final VoidCallback? onPressed;
+
+  /// Side of the thumbnail.
+  static const double size = 60;
 
   @override
   State<GalleryShortcut> createState() => _GalleryShortcutState();
@@ -65,7 +69,7 @@ class _GalleryShortcutState extends State<GalleryShortcut> {
           );
           final latest = await source.assets(all, page: 0, pageSize: 1);
           if (latest.isNotEmpty) {
-            thumbnail = source.thumbnail(latest.first, size: 128);
+            thumbnail = source.thumbnail(latest.first, size: 180);
           }
         }
       }
@@ -90,7 +94,17 @@ class _GalleryShortcutState extends State<GalleryShortcut> {
     final scope = StoryScope.of(context);
     final theme = scope.theme;
     final thumbnail = _thumbnail;
-    final radius = BorderRadius.circular(theme.cornerRadius * 0.75);
+    final radius = BorderRadius.circular(theme.cornerRadius);
+    final placeholder = ColoredBox(
+      color: theme.surfaceVariant,
+      child: Center(
+        child: Icon(
+          Icons.photo_library_outlined,
+          size: 24,
+          color: theme.onSurface,
+        ),
+      ),
+    );
     return Semantics(
       key: CameraKeys.gallery,
       button: true,
@@ -102,30 +116,24 @@ class _GalleryShortcutState extends State<GalleryShortcut> {
         behavior: HitTestBehavior.opaque,
         onTap: widget.onPressed,
         child: SizedBox.square(
-          dimension: 48,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: theme.controlBackground,
-              borderRadius: radius,
-              border: Border.all(color: theme.onSurface, width: 2),
-            ),
-            child: ClipRRect(
-              borderRadius: radius,
+          dimension: GalleryShortcut.size,
+          child: ClipRRect(
+            borderRadius: radius,
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(color: theme.onSurface),
+              ),
               child: thumbnail == null
-                  ? Icon(
-                      Icons.photo_library_outlined,
-                      size: 22,
-                      color: theme.onSurface,
-                    )
+                  ? placeholder
                   : Image(
                       image: thumbnail,
                       fit: BoxFit.cover,
+                      width: GalleryShortcut.size,
+                      height: GalleryShortcut.size,
                       gaplessPlayback: true,
-                      errorBuilder: (context, _, _) => Icon(
-                        Icons.photo_library_outlined,
-                        size: 22,
-                        color: theme.onSurface,
-                      ),
+                      errorBuilder: (context, _, _) => placeholder,
                     ),
             ),
           ),

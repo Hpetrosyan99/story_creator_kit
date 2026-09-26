@@ -12,6 +12,7 @@ import '../model/media_placement.dart';
 import '../model/music_selection.dart';
 import '../model/overlay_transform.dart';
 import '../model/story_document.dart';
+import '../model/story_media.dart';
 import '../model/story_overlay.dart';
 import '../model/trim_range.dart';
 
@@ -180,8 +181,13 @@ class EditorController extends ChangeNotifier {
 
   /// Applies the computed background without recording an undo step and
   /// without making the document dirty.
+  ///
+  /// The editor's starting document only takes the background while it
+  /// still shows the same media (not after [replaceMedia]).
   void applyBackground(StoryBackground background) {
-    _baseline = _baseline.copyWith(background: background);
+    if (_baseline.media == document.media) {
+      _baseline = _baseline.copyWith(background: background);
+    }
     final start = _gestureStart;
     if (start != null) {
       _gestureStart = start.copyWith(background: background);
@@ -409,9 +415,59 @@ class EditorController extends ChangeNotifier {
     );
   }
 
+  /// Swaps the photo or video under the edits, as one undo step.
+  ///
+  /// Text, stickers, emoji, drawing, filter and volumes are kept. The new
+  /// media gets its default placement and the default background (the
+  /// editor recomputes it with [applyBackground]); a video longer than
+  /// [maxDuration] is trimmed to its first [maxDuration], otherwise the trim
+  /// is cleared. Music is kept, with its length set to the new output
+  /// length (see [musicSegmentLength]).
+  void replaceMedia(
+    StoryMedia media, {
+    required Duration maxDuration,
+    required Duration photoDuration,
+  }) {
+    endGesture();
+    final duration = media.duration;
+    final trim = media.isVideo && duration != null && duration > maxDuration
+        ? TrimRange(Duration.zero, maxDuration)
+        : null;
+    var next = document.copyWith(
+      media: media,
+      placement: StoryCanvas.defaultPlacement(media),
+      background: const StoryBackground(),
+      trim: trim,
+      clearTrim: trim == null,
+    );
+    final music = next.music;
+    if (music != null) {
+      next = next.copyWith(
+        music: music.copyWith(
+          duration: _segmentLength(
+            next,
+            photoDuration: photoDuration,
+            maxDuration: maxDuration,
+          ),
+        ),
+      );
+    }
+    _apply(next);
+  }
+
   /// Length the music must cover: the trimmed video, or [photoDuration]
   /// for photos (clamped to [maxDuration]).
   Duration musicSegmentLength({
+    required Duration photoDuration,
+    required Duration maxDuration,
+  }) => _segmentLength(
+    document,
+    photoDuration: photoDuration,
+    maxDuration: maxDuration,
+  );
+
+  static Duration _segmentLength(
+    StoryDocument document, {
     required Duration photoDuration,
     required Duration maxDuration,
   }) {

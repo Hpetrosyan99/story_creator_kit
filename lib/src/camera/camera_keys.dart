@@ -51,6 +51,12 @@ abstract final class CameraKeys {
   /// Focus marker.
   static const focusMarker = ValueKey<String>('story_camera_focus_marker');
 
+  /// "Video | Photo" capture mode toggle.
+  static const captureMode = ValueKey<String>('story_camera_capture_mode');
+
+  /// Text story button (left CTA column).
+  static const textStory = ValueKey<String>('story_camera_text_story');
+
   /// Zoom indicator.
   static const zoom = ValueKey<String>('story_camera_zoom');
 }

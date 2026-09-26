@@ -47,6 +47,7 @@ Only the file names changed. Each family's licence sits next to it:
 
 | Family | Files | Licence |
 |---|---|---|
+| Onest (UI font of the design) | `Onest-Variable.ttf` (variable `wght`) | `Onest-OFL.txt` |
 | Inter | `Inter-Variable.ttf` (variable `opsz`, `wght`) | `Inter-OFL.txt` |
 | Playfair Display | `PlayfairDisplay-Variable.ttf` (variable `wght`) | `PlayfairDisplay-OFL.txt` |
 | Pacifico | `Pacifico-Regular.ttf` | `Pacifico-OFL.txt` |

@@ -75,5 +75,18 @@ void main() {
       );
       expect(formatMusicTime(-s), '0:00');
     });
+
+    test('formatMusicClock prints mm:ss', () {
+      expect(formatMusicClock(Duration.zero), '00:00');
+      expect(
+        formatMusicClock(const Duration(minutes: 3, seconds: 49)),
+        '03:49',
+      );
+      expect(
+        formatMusicClock(const Duration(minutes: 12, seconds: 5)),
+        '12:05',
+      );
+      expect(formatMusicClock(-s), '00:00');
+    });
   });
 }

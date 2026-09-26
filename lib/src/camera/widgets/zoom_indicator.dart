@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/story_scope.dart';
+import '../../ui/story_surface.dart';
 import '../camera_keys.dart';
 
 /// Pill with the zoom factor, e.g. `2.0×`.
@@ -20,15 +21,11 @@ class ZoomIndicator extends StatelessWidget {
       key: CameraKeys.zoom,
       label: '${scope.strings.camera.zoomLevel} $text',
       excludeSemantics: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.controlBackground,
-          borderRadius: BorderRadius.circular(theme.chipRadius),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: Text(text, style: theme.labelStyle),
-        ),
+      child: StorySurface(
+        fill: theme.pillBackground,
+        radius: 14,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Text(text, style: theme.bodyEmphasisStyle),
       ),
     );
   }

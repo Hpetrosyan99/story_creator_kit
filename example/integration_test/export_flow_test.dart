@@ -113,7 +113,7 @@ void main() {
       find.bySemanticsLabel(const ExportStrings().videoPreview),
       findsOneWidget,
     );
-    await tester.tap(find.text(const ExportStrings().useStory));
+    await tester.tap(find.bySemanticsLabel(const ExportStrings().useStory));
     await tester.pump();
     expect(confirmed, isTrue);
   });

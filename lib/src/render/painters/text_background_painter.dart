@@ -98,6 +98,9 @@ abstract final class TextBackgroundPainter {
     ];
   }
 
+  /// Half-height of the strip that joins adjacent line boxes, canvas units.
+  static const double _seamOverlap = 1;
+
   static void _addBlock(Path path, List<Rect> block, double r) {
     const eps = 0.01;
     final round = Radius.circular(r);
@@ -126,6 +129,21 @@ abstract final class TextBackgroundPainter {
         continue;
       }
       final y = rect.bottom;
+      // Line boxes meet edge to edge; anti-aliasing each box separately
+      // leaves a hairline seam there. A thin strip across the joint, where
+      // both boxes are straight, makes the fill one continuous shape.
+      final seamLeft = math.max(rect.left, next.left);
+      final seamRight = math.min(rect.right, next.right);
+      if (seamRight > seamLeft) {
+        path.addRect(
+          Rect.fromLTRB(
+            seamLeft,
+            y - _seamOverlap,
+            seamRight,
+            y + _seamOverlap,
+          ),
+        );
+      }
       if (rect.right > next.right + eps) {
         _addFillet(path, Offset(next.right, y), 1, 1, r);
       } else if (next.right > rect.right + eps) {

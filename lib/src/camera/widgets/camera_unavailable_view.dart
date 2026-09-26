@@ -18,21 +18,17 @@ class CameraUnavailableView extends StatelessWidget {
     final theme = scope.theme;
     return Center(
       key: CameraKeys.unavailable,
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.no_photography_outlined,
-              size: 48,
-              color: theme.onSurfaceMuted,
-            ),
+            const PromptBadge(icon: Icons.no_photography_outlined),
             const SizedBox(height: 16),
             Text(
               scope.strings.camera.cameraUnavailable,
               textAlign: TextAlign.center,
-              style: theme.bodyStyle,
+              style: theme.bodyStyle.copyWith(color: theme.onSurfaceSecondary),
             ),
             const SizedBox(height: 20),
             StoryActionButton(
@@ -46,8 +42,9 @@ class CameraUnavailableView extends StatelessWidget {
   }
 }
 
-/// Shown while the camera starts or reconnects, so a frozen frame is never
-/// left on screen.
+/// Shown while the camera starts or reconnects: the plain dark card, so a
+/// frozen frame is never left on screen and nothing spins. The preview
+/// simply replaces it when it is ready.
 class CameraStartingView extends StatelessWidget {
   /// Creates the view.
   const CameraStartingView({super.key});
@@ -55,24 +52,12 @@ class CameraStartingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = StoryScope.of(context);
-    final theme = scope.theme;
-    return ColoredBox(
+    return Semantics(
       key: CameraKeys.starting,
-      color: theme.background,
-      child: Center(
-        child: Semantics(
-          label: scope.strings.camera.cameraStarting,
-          liveRegion: true,
-          excludeSemantics: true,
-          child: SizedBox.square(
-            dimension: 28,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: theme.onSurfaceMuted,
-            ),
-          ),
-        ),
-      ),
+      label: scope.strings.camera.cameraStarting,
+      liveRegion: true,
+      container: true,
+      child: ColoredBox(color: scope.theme.surface),
     );
   }
 }

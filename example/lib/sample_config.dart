@@ -45,11 +45,16 @@ class ExampleSettings {
   SaveToGalleryMode saveMode = SaveToGalleryMode.button;
   bool music = true;
   bool customStrings = false;
+  bool liquidGlass = false;
 
   StoryCreatorConfig toConfig({
     required SampleMusicProvider musicProvider,
     required StoryEventCallback onEvent,
   }) => StoryCreatorConfig(
+    theme: StoryCreatorTheme(
+      fontFamily: 'Onest',
+      isLiquidGlassEnabled: liquidGlass,
+    ),
     capture: CaptureOptions(galleryMode: galleryMode),
     constraints: MediaConstraints(
       maxVideoDuration: Duration(seconds: maxVideoSeconds),

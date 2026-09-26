@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../core/story_scope.dart';
+import '../../ui/story_icon.dart';
 import '../gallery_keys.dart';
 
-/// First grid tile: goes back to the camera.
+/// First grid tile: goes back to the camera. A raised surface with the
+/// camera icon.
 class CameraTile extends StatelessWidget {
   /// Creates the tile.
   const CameraTile({required this.onPressed, super.key});
@@ -15,11 +17,10 @@ class CameraTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = StoryScope.of(context);
     final theme = scope.theme;
-    final label = scope.strings.camera.camera;
     return Semantics(
       key: GalleryKeys.cameraTile,
       button: true,
-      label: label,
+      label: scope.strings.camera.camera,
       excludeSemantics: true,
       onTap: onPressed,
       child: GestureDetector(
@@ -27,17 +28,8 @@ class CameraTile extends StatelessWidget {
         onTap: onPressed,
         child: ColoredBox(
           color: theme.surfaceVariant,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.photo_camera_outlined,
-                size: 30,
-                color: theme.onSurface,
-              ),
-              const SizedBox(height: 6),
-              Text(label, style: theme.labelStyle),
-            ],
+          child: Center(
+            child: StoryIcon(StoryIcons.camera, color: theme.onSurface),
           ),
         ),
       ),

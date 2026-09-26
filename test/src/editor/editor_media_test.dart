@@ -60,6 +60,7 @@ void main() {
       final h = await pumpEditor(tester, media: _video(hasAudio: false));
       expect(h.video.single.volume, 0);
       // No original audio and no music: no audio mixer.
+      await openMoreTools(tester);
       expect(find.bySemanticsLabel(strings.editor.audio), findsNothing);
     });
 
@@ -171,6 +172,7 @@ void main() {
           music: music?.call(media.path.dirOf),
         ),
       );
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.trim));
       await tester.pump();
       return h;
@@ -197,6 +199,7 @@ void main() {
       var doc = await h.export(tester);
       expect(doc.trim, TrimRange(Duration.zero, const Duration(seconds: 60)));
 
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.trim));
       await tester.pump();
       // Move the start right: the end may follow up to the maximum.
@@ -240,6 +243,7 @@ void main() {
       var trim = (await h.export(tester)).trim!;
       expect(trim.end, const Duration(milliseconds: 59500));
 
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.trim));
       await tester.pump();
       tester.semantics.increase(
@@ -253,6 +257,7 @@ void main() {
 
     testWidgets('trim is hidden for photos', (tester) async {
       await pumpEditor(tester);
+      await openMoreTools(tester);
       expect(find.bySemanticsLabel(strings.editor.trim), findsNothing);
     });
   });
@@ -267,6 +272,7 @@ void main() {
         document: (media) =>
             StoryDocument(media: media, music: _music(media.path.dirOf)),
       );
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.audio));
       await tester.pump();
       expect(find.byType(Slider), findsNWidgets(2));
@@ -299,6 +305,7 @@ void main() {
 
     testWidgets('music slider hidden without music', (tester) async {
       await pumpEditor(tester, media: _video());
+      await openMoreTools(tester);
       await tester.tap(find.bySemanticsLabel(strings.editor.audio));
       await tester.pump();
       expect(find.byType(Slider), findsOneWidget);
@@ -334,6 +341,7 @@ void main() {
 
   testWidgets('filter previews of a video use its first frame', (tester) async {
     final h = await pumpEditor(tester, media: _video());
+    await openMoreTools(tester);
     await tester.tap(find.bySemanticsLabel(strings.editor.filters).first);
     await tester.pump();
     final previews = tester

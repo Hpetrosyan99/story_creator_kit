@@ -7,6 +7,7 @@ import 'package:story_creator_kit/services.dart';
 import 'package:story_creator_kit/src/core/story_canvas.dart';
 import 'package:story_creator_kit/src/core/story_scope.dart';
 import 'package:story_creator_kit/src/editor/canvas/story_canvas_view.dart';
+import 'package:story_creator_kit/src/editor/editor_keys.dart';
 import 'package:story_creator_kit/src/editor/editor_screen.dart';
 import 'package:story_creator_kit/src/render/painters/story_paint_resources_loader.dart';
 import 'package:story_creator_kit/story_creator_kit.dart';
@@ -109,6 +110,8 @@ Future<EditorHarness> pumpEditor(
   Size size = const Size(390, 844),
   bool disableAnimations = false,
   bool accessibleNavigation = false,
+  CaptureOptions capture = const CaptureOptions(),
+  FakeGallerySource? gallery,
 }) async {
   tester.view
     ..physicalSize = size * 3
@@ -135,6 +138,7 @@ Future<EditorHarness> pumpEditor(
   final config = StoryCreatorConfig(
     editor: editor,
     constraints: constraints,
+    capture: capture,
     musicProvider: musicProvider,
   );
   final resources = createStoryPaintResources(editor);
@@ -149,6 +153,7 @@ Future<EditorHarness> pumpEditor(
   final configWithEvents = StoryCreatorConfig(
     editor: config.editor,
     constraints: config.constraints,
+    capture: config.capture,
     musicProvider: config.musicProvider,
     onEvent: harness.events.add,
   );
@@ -170,6 +175,7 @@ Future<EditorHarness> pumpEditor(
   final services = fakeServices(
     tempDir: dir,
     inspector: inspector,
+    gallery: gallery,
     video: () {
       final session = FakeVideoSession(duration: videoDuration);
       videos.add(session);
@@ -226,4 +232,16 @@ Future<void> addText(
   await tester.pump();
   await tester.tap(find.bySemanticsLabel(strings.common.done));
   await tester.pump();
+}
+
+/// Shows the tools behind the "More" chevron (no-op when already shown).
+Future<void> openMoreTools(WidgetTester tester) async {
+  if (find.bySemanticsLabel(strings.editor.moreTools).evaluate().isEmpty) {
+    return;
+  }
+  await tester.tap(find.byKey(EditorKeys.moreTools));
+  // The expand animation starts on the next frame; let it finish so the
+  // tools accept taps.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }

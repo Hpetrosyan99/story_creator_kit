@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/story_scope.dart';
+import '../../ui/story_icon.dart';
 
-/// Pill-shaped search field with an accent search icon and a clear button.
+/// The design's search field: 52 px high, 1 px outline, fully rounded, an
+/// accent magnifier and a clear button once text is entered.
 class MusicSearchField extends StatelessWidget {
   /// Creates the field.
   const MusicSearchField({
@@ -25,51 +27,78 @@ class MusicSearchField extends StatelessWidget {
   /// Called after the clear button emptied the field.
   final VoidCallback onCleared;
 
+  /// Field height.
+  static const double height = 52;
+
   @override
   Widget build(BuildContext context) {
     final scope = StoryScope.of(context);
     final theme = scope.theme;
     final strings = scope.strings.music;
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(theme.chipRadius),
-      borderSide: BorderSide.none,
-    );
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      textInputAction: TextInputAction.search,
-      style: theme.bodyStyle,
-      cursorColor: theme.accent,
-      decoration: InputDecoration(
-        isDense: true,
-        filled: true,
-        fillColor: theme.surfaceVariant,
-        hintText: strings.searchHint,
-        hintStyle: theme.bodyStyle.copyWith(color: theme.onSurfaceMuted),
-        prefixIcon: Icon(Icons.search, color: theme.accent, size: 22),
-        suffixIcon: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: controller,
-          builder: (context, value, _) => value.text.isEmpty
-              ? const SizedBox.shrink()
-              : IconButton(
-                  tooltip: strings.clearSearch,
-                  icon: Icon(
-                    Icons.close,
-                    color: theme.onSurfaceMuted,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    controller.clear();
-                    onCleared();
-                  },
+    return Container(
+      height: height,
+      padding: const EdgeInsets.only(left: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(40),
+        border: Border.all(color: theme.outline),
+      ),
+      child: Row(
+        spacing: 8,
+        children: [
+          StoryIcon(StoryIcons.search, color: theme.accent),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
+              textInputAction: TextInputAction.search,
+              style: theme.bodyLargeStyle,
+              cursorColor: theme.accent,
+              decoration: InputDecoration(
+                isDense: true,
+                // 22 px line + 26 = a 48 px tap target inside the 52 px pill.
+                contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                border: InputBorder.none,
+                hintText: strings.searchHint,
+                hintStyle: theme.bodyLargeStyle.copyWith(
+                  color: theme.onSurfaceMuted,
                 ),
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        border: border,
-        enabledBorder: border,
-        focusedBorder: border,
+              ),
+            ),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => value.text.isEmpty
+                // With the 8 px gap: the design's 12 px right padding.
+                ? const SizedBox(width: 4)
+                : Semantics(
+                    button: true,
+                    label: strings.clearSearch,
+                    excludeSemantics: true,
+                    onTap: _clear,
+                    child: GestureDetector(
+                      key: const ValueKey('music-search-clear'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _clear,
+                      child: SizedBox.square(
+                        dimension: 48,
+                        child: Center(
+                          child: StoryIcon(
+                            StoryIcons.close,
+                            color: theme.onSurfaceMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _clear() {
+    controller.clear();
+    onCleared();
   }
 }

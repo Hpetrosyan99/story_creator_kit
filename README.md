@@ -1,5 +1,20 @@
 # story_creator_kit
 
+<table>
+  <tr>
+    <td align="center"><img src="https://raw.githubusercontent.com/Hpetrosyan99/story_creator_kit/main/docs/demo/demo_1_capture_and_create.gif" width="240" alt="Capture a photo, add styled text, a sticker and a drawing, export"></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Hpetrosyan99/story_creator_kit/main/docs/demo/demo_2_gallery_and_music.gif" width="240" alt="Pick from the gallery, apply filters, add music and choose a segment"></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Hpetrosyan99/story_creator_kit/main/docs/demo/demo_3_video_trim_and_audio.gif" width="240" alt="Record a video, trim it, mute the audio, add an emoji"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Capture &amp; create</b></td>
+    <td align="center"><b>Gallery &amp; music</b></td>
+    <td align="center"><b>Video: trim &amp; audio</b></td>
+  </tr>
+</table>
+
+<sub>Recorded on the iOS Simulator with <code>isLiquidGlassEnabled: true</code>.</sub>
+
 An Instagram-style story creator for Flutter apps on iOS and Android. It
 covers the whole flow: camera, gallery, editor (text, drawing, stickers,
 emoji, filters, music, trim), native export to JPEG or MP4, and a preview of
@@ -18,7 +33,6 @@ stickers, and you decide what happens with the file.
 ## Contents
 
 - [Features](#features)
-- [Screenshots](#screenshots)
 - [Installation](#installation)
 - [iOS setup](#ios-setup)
 - [Android setup](#android-setup)
@@ -66,17 +80,11 @@ stickers, and you decide what happens with the file.
   tools, fonts, stickers, filters and output. Every platform service can be
   replaced, e.g. with a simulated camera.
 
-## Screenshots
-
-Screenshots of the camera, editor, music picker and segment selector will be
-added with the first published release. Until then, run the example app in
-[`example/`](example) to see the flow.
-
 ## Installation
 
 ```yaml
 dependencies:
-  story_creator_kit: ^0.1.0
+  story_creator_kit: ^0.2.0
 ```
 
 Requirements:
@@ -298,7 +306,10 @@ setup:
 
 ```dart
 final config = StoryCreatorConfig(
-  theme: const StoryCreatorTheme(accent: Color(0xFFE4572E)),
+  theme: const StoryCreatorTheme(
+    fontFamily: 'Onest',
+    isLiquidGlassEnabled: true,
+  ),
   strings: const StoryCreatorStrings(),
   capture: const CaptureOptions(
     initialLens: StoryCameraLens.back,
@@ -341,15 +352,29 @@ accent.
 
 | Field | Default | Used for |
 |---|---|---|
-| `background` | `#000000` | behind the canvas |
-| `surface`, `surfaceVariant` | `#161616`, `#262626` | sheets, chips, search fields |
-| `onSurface`, `onSurfaceMuted` | white, `#9A9A9A` | text and icons, secondary text |
-| `outline` | `#3A3A3A` | borders, inactive slider track |
-| `accent`, `onAccent` | `#E4572E`, white | primary actions, selection, progress |
-| `error` | `#FF453A` | destructive actions and errors |
-| `scrim`, `controlBackground` | translucent black | dialogs, round icon buttons on the canvas |
-| `fontFamily`, `fontPackage` | platform font | the library's own UI text |
-| `cornerRadius`, `chipRadius` | 12, 20 | sheets and tiles, pills |
+| `background` | `#141414` | page behind the canvas card |
+| `surface`, `surfaceVariant` | `#1F1F21`, `#2D2D30` | panels, music chip, playing row; chips, camera tile |
+| `onSurface`, `onSurfaceSecondary`, `onSurfaceMuted` | white, `#C2C2C2`, `#737373` | text and icons; unselected modes; artists, placeholders |
+| `outline` | `#525257` | borders |
+| `accent`, `onAccent` | `#CF5835`, white | primary actions, selection, progress |
+| `error` | `#D92D20` | errors, the recording shutter |
+| `controlBackground` | rgba(31,31,33,0.4) | 44 px round buttons on the canvas |
+| `pillBackground` | rgba(20,20,20,0.5) | Video/Photo toggle, lens switch, save pill |
+| `scrim` | black 40% | dialogs, export overlay, segment selector |
+| `isLiquidGlassEnabled` | `false` | frosted "liquid glass" rendering of the translucent controls |
+| `fontFamily`, `fontPackage` | platform font | the library's own UI text (the design uses Onest) |
+| `cornerRadius`, `chipRadius` | 16, 999 | canvas card and thumbnails, pills |
+
+**Liquid glass.** With `isLiquidGlassEnabled: true`, the close/confirm
+buttons, the Video/Photo toggle, the lens switch and the music
+chip render as frosted glass: a saturated backdrop blur with a light rim and
+sheen. It uses `BackdropFilter.grouped` under one `BackdropGroup`, so all
+glass controls share a single backdrop read. With `false` they use the flat
+fills above.
+
+**Fonts.** The library ships no UI font. Bundle one in your app and set
+`fontFamily` (the design uses [Onest](https://fonts.google.com/specimen/Onest),
+SIL OFL). Variable fonts work: text styles set the `wght` axis.
 
 `copyWith` changes single values:
 `const StoryCreatorTheme().copyWith(accent: brandColor)`.

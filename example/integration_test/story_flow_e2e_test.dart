@@ -85,6 +85,15 @@ void main() {
 
   Future<void> tapLabel(WidgetTester tester, String text) async {
     step = 'tap $text';
+    // Secondary editor tools sit behind "More tools".
+    for (var i = 0; i < 10 && label(text).evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    if (label(text).evaluate().isEmpty &&
+        label('More tools').evaluate().isNotEmpty) {
+      await tester.tap(label('More tools').last);
+      await settle(tester);
+    }
     await pumpUntil(tester, label(text), reason: 'control "$text"');
     await tester.tap(label(text).last);
     await settle(tester);
@@ -97,12 +106,12 @@ void main() {
     await tapLabel(tester, 'Share story');
     await pumpUntil(
       tester,
-      find.text('Use story'),
+      label('Use story'),
       timeout: timeout,
       reason: 'preview after export',
     );
     await settle(tester, 1000);
-    await tester.tap(find.text('Use story'));
+    await tester.tap(label('Use story').last);
     await pumpUntil(
       tester,
       find.byKey(const ValueKey('result-page')),
@@ -171,17 +180,17 @@ void main() {
     await tapLabel(tester, 'Music');
     await pumpUntil(
       tester,
-      find.byTooltip('Use this track'),
+      find.byKey(const ValueKey('music-track-select')),
       reason: 'music tracks',
     );
-    await tester.tap(find.byTooltip('Use this track').first);
+    await tester.tap(find.byKey(const ValueKey('music-track-select')).first);
     await pumpUntil(
       tester,
       find.byKey(const ValueKey('music-segment-window')),
       reason: 'segment selector',
     );
     await settle(tester, 1000);
-    await tester.tap(find.byTooltip('Done').last);
+    await tester.tap(find.byKey(const ValueKey('music-segment-done')));
     await pumpUntil(tester, label('Share story'), reason: 'editor again');
     await settle(tester);
 
@@ -240,7 +249,7 @@ void main() {
     await tapLabel(tester, 'Share story');
     await pumpUntil(
       tester,
-      find.text('Use story'),
+      label('Use story'),
       timeout: const Duration(seconds: 90),
       reason: 'preview',
     );

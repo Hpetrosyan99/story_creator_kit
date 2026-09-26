@@ -162,17 +162,22 @@ class _StoryCreatorPageState extends State<StoryCreatorPage> {
         style: theme.bodyStyle,
         child: IconTheme(
           data: IconThemeData(color: theme.onSurface, size: 26),
-          child: Material(
-            color: theme.background,
-            child: session == null || flow == null
-                ? const SizedBox.expand()
-                : StoryScope(
-                    config: widget.config,
-                    services: _services,
-                    session: session,
-                    resources: _resources,
-                    child: StoryFlowView(controller: flow, onFinished: _finish),
-                  ),
+          child: BackdropGroup(
+            child: Material(
+              color: theme.background,
+              child: session == null || flow == null
+                  ? const SizedBox.expand()
+                  : StoryScope(
+                      config: widget.config,
+                      services: _services,
+                      session: session,
+                      resources: _resources,
+                      child: StoryFlowView(
+                        controller: flow,
+                        onFinished: _finish,
+                      ),
+                    ),
+            ),
           ),
         ),
       ),

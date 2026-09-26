@@ -7,11 +7,13 @@ import 'package:flutter/widgets.dart';
 import '../api/config/capture_options.dart';
 import '../api/config/media_constraints.dart';
 import '../api/errors/story_exception.dart';
+import '../api/result/story_result.dart';
 import '../core/media_import.dart';
 import '../model/story_media.dart';
 import '../services/capture/capture_service.dart';
 import '../services/gallery/gallery_source.dart';
 import '../services/permissions/permission_service.dart';
+import 'text_story_background.dart';
 
 /// What the camera screen shows.
 enum CameraStatus {
@@ -35,6 +37,15 @@ enum CameraStatus {
 
   /// Released because the app is in the background.
   paused,
+}
+
+/// What a tap on the shutter does.
+enum CameraCaptureMode {
+  /// Tap takes a photo; press and hold records a video.
+  photo,
+
+  /// Tap starts and stops a recording; press and hold also records.
+  video,
 }
 
 /// A short message shown over the camera.
@@ -131,6 +142,9 @@ class StoryCameraController extends ChangeNotifier with WidgetsBindingObserver {
   CaptureCapabilities? _caps;
   StoryCameraLens _lens;
   StoryFlashMode _flash = StoryFlashMode.off;
+  late CameraCaptureMode _mode = photoEnabled
+      ? CameraCaptureMode.photo
+      : CameraCaptureMode.video;
   double _zoom = 1;
   bool _recording = false;
   bool _locked = false;
@@ -179,6 +193,12 @@ class StoryCameraController extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Current zoom factor.
   double get zoom => _zoom;
+
+  /// What a tap on the shutter does.
+  CameraCaptureMode get captureMode => _mode;
+
+  /// Whether the Video | Photo toggle is shown (both are enabled).
+  bool get captureModeSelectable => photoEnabled && videoEnabled;
 
   /// Whether a recording runs.
   bool get isRecording => _recording;
@@ -723,8 +743,45 @@ class StoryCameraController extends ChangeNotifier with WidgetsBindingObserver {
     _ => CameraNotice.captureFailed,
   };
 
+  /// Starts a text-only story: renders a 1080×1920 vertical gradient from
+  /// [top] to [bottom] into the session directory and imports it as a
+  /// photo.
+  Future<void> createTextStory({
+    required Color top,
+    required Color bottom,
+  }) async {
+    if (_busy || _recording || _capturing || !_constraints.allowPhotos) {
+      return;
+    }
+    await _import(() async {
+      final path = _importer.session.newPath('png', prefix: 'text');
+      await writeTextStoryBackground(path, top: top, bottom: bottom);
+      return _importer.importCaptured(
+        CapturedFile(path: path, type: StoryMediaType.photo, lens: _lens),
+      );
+    }, tooShort: CameraNotice.captureFailed);
+  }
+
   // ---------------------------------------------------------------------
   // Controls
+
+  /// Selects what a tap on the shutter does. Ignored while recording or
+  /// when [mode] is not enabled.
+  void setCaptureMode(CameraCaptureMode mode) {
+    if (_recording || mode == _mode) {
+      return;
+    }
+    final allowed = switch (mode) {
+      CameraCaptureMode.photo => photoEnabled,
+      CameraCaptureMode.video => videoEnabled,
+    };
+    if (!allowed) {
+      return;
+    }
+    _mode = mode;
+    unawaited(HapticFeedback.selectionClick());
+    _notify();
+  }
 
   /// Cycles the flash: off → auto → on (hardware flash) or off → on
   /// (screen flash).

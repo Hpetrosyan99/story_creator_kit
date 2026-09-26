@@ -1,3 +1,12 @@
+## 0.2.0
+
+- New design: dark palette (`#141414` / `#1F1F21` / `#2D2D30`, accent `#CF5835`), rounded canvas card, 44 px nav buttons, 20 px icon rails, new camera, gallery, editor, music list and waveform segment selector.
+- `StoryCreatorTheme.isLiquidGlassEnabled`: frosted liquid-glass rendering of the translucent controls; plus `onSurfaceSecondary`, `pillBackground` tokens and new text styles.
+- Camera: Video / Photo toggle, text-only story, red recording shutter; no loading spinner when the creator opens.
+- Editor: gallery thumbnail replaces the media keeping edits; music chip; secondary tools behind "More".
+- Music: tap a track to select it; `MusicCategory.showRanks` for leaderboard-style lists.
+- Icons are bundled SVGs (new dependency: `flutter_svg`).
+
 ## 0.1.0
 
 First release. Supports iOS 16+ and Android 8.0+ (API 26).

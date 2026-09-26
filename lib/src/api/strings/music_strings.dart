@@ -22,8 +22,14 @@ class MusicStrings {
     this.trackUnavailable = 'This track is unavailable.',
     this.useTrack = 'Use this track',
     this.clearSearch = 'Clear search',
-    this.clearCategory = 'Clear filter',
+    this.clearCategory = 'Clear search and filter',
+    this.moreActions = 'More options',
+    this.loading = 'Loading music…',
+    this.trackLabel = _defaultTrackLabel,
   });
+
+  static String _defaultTrackLabel(String title, String artist) =>
+      '$title by $artist';
 
   /// Picker title.
   final String title;
@@ -46,13 +52,14 @@ class MusicStrings {
   /// Remove bookmark action label.
   final String removeBookmark;
 
-  /// Start preview label.
+  /// Label of the row action (long press) that previews a track.
   final String preview;
 
-  /// Stop preview label.
+  /// Label of the row action (long press) that stops the preview.
   final String stopPreview;
 
-  /// Segment selector title.
+  /// Screen-reader label of the segment selector's waveform slider (the
+  /// selector shows no visible title).
   final String chooseSegment;
 
   /// Remove selected music label.
@@ -64,14 +71,25 @@ class MusicStrings {
   /// Error when a track cannot be resolved.
   final String trackUnavailable;
 
-  /// Label of the button on a track row that picks the track and opens the
-  /// segment selector (tapping the row itself only previews it).
+  /// Screen-reader hint of a track row: tapping the row picks the track and
+  /// opens the segment selector.
   final String useTrack;
 
   /// Label of the button that empties the search field.
   final String clearSearch;
 
-  /// Hint of the selected category chip; tapping it goes back to the first
-  /// category.
+  /// Hint of the selected category chip; tapping its ✕ empties the search
+  /// and goes back to the first category.
   final String clearCategory;
+
+  /// Label of the ⋮ button on a ranked row (see `MusicCategory.showRanks`),
+  /// which opens the bookmark menu.
+  final String moreActions;
+
+  /// Screen-reader label of the track list while its first page loads.
+  final String loading;
+
+  /// Screen-reader description of the track in the segment selector, e.g.
+  /// "Daisies by Justin Bieber".
+  final String Function(String title, String artist) trackLabel;
 }

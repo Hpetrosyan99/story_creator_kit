@@ -155,6 +155,13 @@ class _HomePageState extends State<HomePage> {
             onChanged: (v) => setState(() => _settings.music = v),
           ),
           SwitchListTile(
+            key: const ValueKey('liquid-glass'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Liquid glass buttons'),
+            value: _settings.liquidGlass,
+            onChanged: (v) => setState(() => _settings.liquidGlass = v),
+          ),
+          SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Custom strings'),
             value: _settings.customStrings,

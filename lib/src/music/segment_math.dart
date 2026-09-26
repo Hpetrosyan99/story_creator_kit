@@ -83,3 +83,12 @@ String formatMusicTime(Duration value) {
   final rest = (seconds % 60).toString().padLeft(2, '0');
   return '$minutes:$rest';
 }
+
+/// Formats [value] as `mm:ss`, e.g. `03:07` — the track length on a music
+/// row. Negative values show as `00:00`.
+String formatMusicClock(Duration value) {
+  final seconds = value.isNegative ? 0 : value.inSeconds;
+  final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
+  final rest = (seconds % 60).toString().padLeft(2, '0');
+  return '$minutes:$rest';
+}

@@ -158,6 +158,19 @@ class MusicPickerController extends ChangeNotifier {
   /// Goes back to the first category.
   void clearCategory() => selectCategory(categories.first);
 
+  /// Empties the search and goes back to the first category, with a single
+  /// reload (none when nothing changes). Cancels a pending debounced search.
+  void resetFilters() {
+    _debounce?.cancel();
+    final first = categories.first;
+    if (_search.isEmpty && _category == first) {
+      return;
+    }
+    _search = '';
+    _category = first;
+    unawaited(_reload());
+  }
+
   /// Reloads the first page after an error.
   Future<void> retry() => _reload();
 
